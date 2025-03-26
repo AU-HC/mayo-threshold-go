@@ -1,16 +1,15 @@
 package mock
 
-import "mayo-threshold-go/rand"
+import (
+	"mayo-threshold-go/rand"
+	"reflect"
+)
 
 func CreatePartiesAndSharesForEsk(esk ExpandedSecretKey, epk ExpandedPublicKey, n int) []Party {
 	// First create the empty structs
 	eskShares := make([]ExpandedSecretKey, n)
 	for i := 0; i < n; i++ {
-		eskShares[i] = ExpandedSecretKey{
-			P1: esk.P1,
-			L:  esk.L,
-			O:  esk.O,
-		}
+		eskShares[i] = getNewExpandedSecretKey()
 	}
 
 	// Create the shares of the esk L
@@ -56,4 +55,47 @@ func generateSharesForElement(n int, element byte) []byte {
 	shares[n-1] = element ^ sharesSum // then the last share is given by the n-1 shares
 
 	return shares
+}
+
+func VerifyShares(esk ExpandedSecretKey, parties []Party) bool {
+	n := len(parties)
+	if n == 0 {
+		return false
+	}
+
+	reconstructedL := make([][][]byte, len(esk.L))
+	for i := range esk.L {
+		reconstructedL[i] = make([][]byte, len(esk.L[i]))
+		for j := range esk.L[i] {
+			reconstructedL[i][j] = make([]byte, len(esk.L[i][j]))
+		}
+	}
+
+	reconstructedO := make([][]byte, len(esk.O))
+	for i := range esk.O {
+		reconstructedO[i] = make([]byte, len(esk.O[i]))
+	}
+
+	// Reconstruct esk.L
+	for i, matrix := range esk.L {
+		for j, row := range matrix {
+			for k := range row {
+				for _, party := range parties {
+					reconstructedL[i][j][k] ^= party.EskShare.L[i][j][k] // XOR to reconstruct
+				}
+			}
+		}
+	}
+
+	// Reconstruct esk.O
+	for i, row := range esk.O {
+		for j := range row {
+			for _, party := range parties {
+				reconstructedO[i][j] ^= party.EskShare.O[i][j] // XOR to reconstruct
+			}
+		}
+	}
+
+	// Compare reconstructed values with original esk
+	return reflect.DeepEqual(esk.L, reconstructedL) && reflect.DeepEqual(esk.O, reconstructedO)
 }

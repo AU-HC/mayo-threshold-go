@@ -22,3 +22,12 @@ func GetExpandedKeyPair() (ExpandedSecretKey, ExpandedPublicKey) {
 
 	return esk, epk
 }
+
+func getNewExpandedSecretKey() ExpandedSecretKey {
+	var eskCopy ExpandedSecretKey
+	eskBytes := getBytesFromFile(eskFileName)
+	if err := json.Unmarshal(eskBytes, &eskCopy); err != nil {
+		panic(err)
+	}
+	return eskCopy
+}

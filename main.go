@@ -5,12 +5,21 @@ import (
 	"mayo-threshold-go/mock"
 )
 
+const n = 2
+
 func main() {
+	// Get mock esk, epk
 	esk, epk := mock.GetExpandedKeyPair()
 
-	fmt.Println(esk)
-	fmt.Println(epk)
+	// Start the parties, by giving them the epk and shares of the esk
+	parties := mock.CreatePartiesAndAddShares(esk, epk, n)
+	alice := parties[0]
+	bob := parties[1]
 
-	//skShares := mock.GenerateRandomShares(esk)
-
+	// Do stuff
+	if alice.Epk.P1[0][0][0] == bob.Epk.P1[1][0][0] {
+		fmt.Println("yes")
+	} else {
+		fmt.Println("no")
+	}
 }

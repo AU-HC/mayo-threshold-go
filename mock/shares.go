@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func CreatePartiesAndSharesForEsk(esk ExpandedSecretKey, epk ExpandedPublicKey, n int) []Party {
+func CreatePartiesAndSharesForEsk(esk ExpandedSecretKey, epk ExpandedPublicKey, n int) []*Party {
 	// First create the empty structs
 	eskShares := make([]ExpandedSecretKey, n)
 	for i := 0; i < n; i++ {
@@ -35,9 +35,9 @@ func CreatePartiesAndSharesForEsk(esk ExpandedSecretKey, epk ExpandedPublicKey, 
 	}
 
 	// Set the epk and the esk shares
-	parties := make([]Party, n)
+	parties := make([]*Party, n)
 	for i := 0; i < n; i++ {
-		party := Party{EskShare: eskShares[i], Epk: epk}
+		party := &Party{EskShare: eskShares[i], Epk: epk}
 		parties[i] = party
 	}
 	return parties
@@ -57,7 +57,7 @@ func generateSharesForElement(n int, element byte) []byte {
 	return shares
 }
 
-func VerifyShares(esk ExpandedSecretKey, parties []Party) bool {
+func VerifyShares(esk ExpandedSecretKey, parties []*Party) bool {
 	n := len(parties)
 	if n == 0 {
 		return false

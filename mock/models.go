@@ -15,4 +15,5 @@ type ExpandedPublicKey struct {
 type Party struct {
 	EskShare ExpandedSecretKey
 	Epk      ExpandedPublicKey
+	Shares   map[string][][][]byte
 }

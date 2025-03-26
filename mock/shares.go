@@ -2,7 +2,7 @@ package mock
 
 import "mayo-threshold-go/rand"
 
-func CreatePartiesAndAddShares(esk ExpandedSecretKey, epk ExpandedPublicKey, n int) []Party {
+func CreatePartiesAndSharesForEsk(esk ExpandedSecretKey, epk ExpandedPublicKey, n int) []Party {
 	// First create the empty structs
 	eskShares := make([]ExpandedSecretKey, n)
 	for i := 0; i < n; i++ {

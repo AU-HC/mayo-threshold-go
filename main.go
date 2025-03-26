@@ -12,7 +12,7 @@ func main() {
 	esk, epk := mock.GetExpandedKeyPair()
 
 	// Start the parties, by giving them the epk and shares of the esk
-	parties := mock.CreatePartiesAndAddShares(esk, epk, n)
+	parties := mock.CreatePartiesAndSharesForEsk(esk, epk, n)
 	alice := parties[0]
 	bob := parties[1]
 

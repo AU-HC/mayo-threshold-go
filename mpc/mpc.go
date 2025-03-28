@@ -43,6 +43,18 @@ func LocalComputeY(parties []*model.Party) {
 
 }
 
+func ComputeX(parties []*model.Party) {
+
+}
+
+func ComputeS(parties []*model.Party) {
+
+}
+
+func ComputeSignature(parties []*model.Party) {
+
+}
+
 func ComputeT(parties []*model.Party) {
 	for _, party := range parties {
 		A := party.A
@@ -62,4 +74,12 @@ func ComputeT(parties []*model.Party) {
 
 func Rank(t [][]byte) int {
 	return 0 // TODO: Implement rank of matrix
+}
+
+func ComputeAInverse(parties []*model.Party) {
+
+}
+
+func Computex(parties []*model.Party) {
+
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"mayo-threshold-go/mock"
 	"mayo-threshold-go/mpc"
 )
@@ -25,13 +24,20 @@ func main() {
 	mpc.LocalComputeA(parties)
 	mpc.LocalComputeY(parties)
 
+	// Step 6 of sign
+	// ** Algorithm solve **
 	// Steps 1-4 of solve
 	mpc.ComputeT(parties)
-	// TODO: Remaining steps of solve
+	// Step 5 of solve
+	mpc.ComputeAInverse(parties)
+	// Steps 6-9 of solve
+	mpc.Computex(parties)
+	// ** Algorithm solve **
 
-	// Step 6 of sign
-	// TODO: Remaining steps of sign
-
-	// Do stuff
-	fmt.Println(mock.VerifyShares(esk, parties))
+	// Step 7 of sign
+	mpc.ComputeX(parties)
+	// step 8 of sign
+	mpc.ComputeS(parties)
+	// step 9 of sign
+	mpc.ComputeSignature(parties)
 }

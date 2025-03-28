@@ -1,11 +1,11 @@
 package mpc
 
 import (
-	"mayo-threshold-go/mock"
+	"mayo-threshold-go/model"
 	"mayo-threshold-go/rand"
 )
 
-func AddListOfMatrices(parties []*mock.Party, id1, id2, id3 string) {
+func AddListOfMatrices(parties []*model.Party, id1, id2, id3 string) {
 	for _, party := range parties {
 		listOfMatrices1 := party.Shares[id1]
 		listOfMatrices2 := party.Shares[id2]
@@ -25,13 +25,42 @@ func AddListOfMatrices(parties []*mock.Party, id1, id2, id3 string) {
 	}
 }
 
-func Coin(parties []*mock.Party, lambda int) []byte {
+func MultiplyMatrices(a, b [][]byte) [][]byte {
+	result := make([][]byte, 0)
+	return result
+}
+
+func MultiplyMatrixWithConstantMatrix(a, b [][]byte) [][]byte {
+	result := make([][]byte, 0)
+	return result
+}
+
+func MatrixTranspose(a [][]byte) [][]byte {
+	result := make([][]byte, 0)
+	return result
+}
+
+func Coin(parties []*model.Party, lambda int) []byte {
 	result := make([]byte, lambda+64)
 
 	for i := 0; i < lambda+64; i++ {
 		for _, _ = range parties {
 			result[i] ^= rand.SampleFieldElement()
 		}
+	}
+
+	return result
+}
+
+func RandMatrix(r, c int) [][]byte {
+	result := make([][]byte, r)
+
+	for i := 0; i < r; i++ {
+		row := make([]byte, c)
+		for j := 0; j < c; j++ {
+			row[j] = rand.SampleFieldElement()
+		}
+		result[i] = row
 	}
 
 	return result

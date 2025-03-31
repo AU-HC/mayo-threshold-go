@@ -141,6 +141,20 @@ func MultiplyMatrices(A, B [][]byte) [][]byte {
 	return C
 }
 
+func MultiplyMatrixWithConstant(A [][]byte, c byte) [][]byte {
+	rowsA, colsA := len(A), len(A[0])
+	B := make([][]byte, rowsA)
+
+	for i := 0; i < rowsA; i++ {
+		B[i] = make([]byte, colsA)
+		for j := 0; j < colsA; j++ {
+			B[i][j] = gf16Mul(A[i][j], c)
+		}
+	}
+
+	return B
+}
+
 func gf16Mul(a, b byte) byte {
 	var r byte
 
@@ -159,6 +173,37 @@ func gf16Mul(a, b byte) byte {
 	r = (r ^ reducedOverFlowBits) & 0x0F
 
 	return r
+}
+
+func multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares, eShares [][][]byte, dRow, dCol, eRow, eCol int) [][][]byte {
+	zShares := make([][][]byte, len(parties))
+
+	d := generateZeroMatrix(dRow, dCol)
+	e := generateZeroMatrix(eRow, eCol)
+	for j := range parties {
+		AddMatrices(d, dShares[j])
+		AddMatrices(e, eShares[j])
+	}
+
+	for partyNumber := range parties {
+		a := triple.A[partyNumber]
+		b := triple.B[partyNumber]
+		c := triple.C[partyNumber]
+
+		db := MultiplyMatrices(d, b) // d * [b]
+		de := MultiplyMatrices(d, e) // d * e
+		ae := MultiplyMatrices(a, e) // [a] * e
+		AddMatrices(db, ae)          // d * [b] + [a] * e
+		AddMatrices(db, c)           // d * [b] + [a] * e + [c]
+
+		if partyNumber == 0 {
+			AddMatrices(db, de) // d * [b] + [a] * e + [c] + d * e
+		}
+
+		zShares[partyNumber] = db
+	}
+
+	return zShares
 }
 
 func MatrixTranspose(a [][]byte) [][]byte {

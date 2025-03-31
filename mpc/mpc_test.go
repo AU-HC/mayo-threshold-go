@@ -1,6 +1,9 @@
 package mpc
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestRankOfMatrix(t *testing.T) {
 	matrix := [][]byte{
@@ -25,5 +28,45 @@ func TestRankOfMatrix(t *testing.T) {
 	if result != expected {
 		t.Errorf("Expected rank %d, but got %d", expected, result)
 	}
+}
 
+func TestRightInverseOfMatrixForSquareMatrix(t *testing.T) {
+	matrix := [][]byte{
+		{1, 2, 3},
+		{4, 5, 6},
+		{7, 8, 7},
+	}
+	rightInverse := RightInverse(matrix)
+
+	identity := make([][]byte, len(matrix))
+	for i := range identity {
+		identity[i] = make([]byte, len(matrix))
+		identity[i][i] = 1
+	}
+
+	actual := MultiplyMatrices(matrix, rightInverse)
+	if !reflect.DeepEqual(actual, identity) {
+		t.Errorf("Expected identity matrix, but got %v", actual)
+		return
+	}
+}
+
+func TestRightInverseOfMatrixForNonSquareMatrix(t *testing.T) {
+	matrix := [][]byte{
+		{1, 2, 3, 4},
+		{5, 6, 7, 8},
+	}
+	rightInverse := RightInverse(matrix)
+
+	identity := make([][]byte, len(matrix))
+	for i := range identity {
+		identity[i] = make([]byte, len(matrix))
+		identity[i][i] = 1
+	}
+
+	actual := MultiplyMatrices(matrix, rightInverse)
+	if !reflect.DeepEqual(actual, identity) {
+		t.Errorf("Expected identity matrix, but got %v", actual)
+		return
+	}
 }

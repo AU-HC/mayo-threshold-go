@@ -17,6 +17,7 @@ func main() {
 	// Start the parties, by giving them the epk and shares of the esk
 	parties := mock.CreatePartiesAndSharesForEsk(esk, epk, n)
 
+	// Begin signing the message
 	for true {
 		// Steps 1-3 of sign
 		mpc.ComputeM(parties)

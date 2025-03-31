@@ -1,4 +1,4 @@
-package mock
+package model
 
 type ExpandedSecretKey struct {
 	P1 [][][]byte

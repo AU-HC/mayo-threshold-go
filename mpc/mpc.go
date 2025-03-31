@@ -7,8 +7,12 @@ const k = 4
 const n = 0
 const o = 0
 const v = n - o
+const lambda = 2
 
 func ComputeM(parties []*model.Party) {
+	salt := Coin(parties, lambda)
+	t := make([]byte, 0) // TODO: Call hash function
+
 	for _, party := range parties {
 		V := RandMatrix(k, v)
 		M := make([][][]byte, m)
@@ -17,6 +21,8 @@ func ComputeM(parties []*model.Party) {
 			M[i] = MultiplyMatrices(V, Li)
 		}
 
+		party.Salt = salt
+		party.T = t
 		party.M = M
 		party.V = V
 	}

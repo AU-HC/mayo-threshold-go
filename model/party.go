@@ -1,10 +1,10 @@
 package model
 
-import "mayo-threshold-go/mock"
-
 type Party struct {
-	EskShare mock.ExpandedSecretKey
-	Epk      mock.ExpandedPublicKey
+	EskShare ExpandedSecretKey
+	Epk      ExpandedPublicKey
+	Salt     []byte
+	T        []byte
 	V        [][]byte
 	M        [][][]byte
 	Y        [][][]byte

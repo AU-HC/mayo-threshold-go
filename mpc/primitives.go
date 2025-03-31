@@ -65,12 +65,12 @@ func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 	aReconstructed := generateZeroMatrix(r1, c1)
 	bReconstructed := generateZeroMatrix(r2, c2)
 	cReconstructed := generateZeroMatrix(r1, c2)
-	for i := 0; i < n-1; i++ {
+	for i := 0; i < n; i++ {
 		AddMatrices(aReconstructed, aShares[i])
 		AddMatrices(bReconstructed, bShares[i])
 		AddMatrices(cReconstructed, cShares[i])
 	}
-	if reflect.DeepEqual(c, MultiplyMatrices(aReconstructed, bReconstructed)) {
+	if !reflect.DeepEqual(cReconstructed, MultiplyMatrices(aReconstructed, bReconstructed)) {
 		panic(fmt.Errorf("c is not the product of a and b"))
 	}
 
@@ -105,7 +105,7 @@ func AddMatrices(a, b [][]byte) {
 }
 
 func AddMatricesNew(a, b [][]byte) [][]byte {
-	if len(a) != len(b) && len(a[0]) != len(a[0]) {
+	if len(a) != len(b) && len(a[0]) != len(b[0]) {
 		panic(fmt.Errorf("a and b do not have the same dimensions"))
 	}
 

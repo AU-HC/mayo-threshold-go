@@ -1,6 +1,9 @@
 package mpc
 
-import "mayo-threshold-go/model"
+import (
+	"mayo-threshold-go/model"
+	"reflect"
+)
 
 const m = 64
 const k = 4
@@ -15,11 +18,14 @@ func ComputeM(parties []*model.Party) {
 	t := make([]byte, 0)                                                  // TODO: Call hash function
 	triples := GenerateMultiplicationTriples(len(parties), k, v, v, o, m) // V: k x v, Li: v x o
 
+	VReconstructed := generateZeroMatrix(k, v)
 	for _, party := range parties {
 		V := RandMatrix(k, v)
+		AddMatrices(VReconstructed, V)
 		party.Salt = salt
 		party.T = t
 		party.V = V
+		party.M = make([][][]byte, m)
 	}
 
 	for i := 0; i < m; i++ {
@@ -47,22 +53,31 @@ func ComputeM(parties []*model.Party) {
 
 		// Compute locally
 		for partyNumber, party := range parties {
-			M := make([][][]byte, m)
-			for j := range party.EskShare.L {
-				a := triples[j].A[partyNumber]
-				b := triples[j].B[partyNumber]
-				c := triples[j].C[partyNumber]
+			a := triples[i].A[partyNumber]
+			b := triples[i].B[partyNumber]
+			c := triples[i].C[partyNumber]
 
-				db := MultiplyMatrices(d, b) // d * [b]
-				de := MultiplyMatrices(d, e) // d * e
-				ea := MultiplyMatrices(a, e) // e * [a]
-				AddMatrices(db, ea)          // d * [b] + e * [a]
-				AddMatrices(db, c)           // d * [b] + e * [a] + [c]
-				AddMatrices(db, de)          // d * [b] + e * [a] + [c] + d * e
+			db := MultiplyMatrices(d, b) // d * [b]
+			de := MultiplyMatrices(d, e) // d * e
+			ae := MultiplyMatrices(a, e) // [a] * e
+			AddMatrices(db, ae)          // d * [b] + [a] * e
+			AddMatrices(db, c)           // d * [b] + [a] * e + [c]
 
-				M[i] = db // k x o
+			if partyNumber == 0 {
+				AddMatrices(db, de) // d * [b] + [a] * e + [c] + d * e
 			}
-			party.M = M
+
+			party.M[i] = db // k x o
+		}
+
+		MReconstructed := generateZeroMatrix(k, o)
+		LReconstructed := generateZeroMatrix(v, o)
+		for _, party := range parties {
+			AddMatrices(MReconstructed, party.M[i])
+			AddMatrices(LReconstructed, party.EskShare.L[i])
+		}
+		if !reflect.DeepEqual(MReconstructed, MultiplyMatrices(VReconstructed, LReconstructed)) {
+			panic("M is not equal to V * L")
 		}
 	}
 }

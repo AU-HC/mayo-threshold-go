@@ -27,7 +27,15 @@ func AddListOfMatrices(parties []*model.Party, id1, id2, id3 string) {
 	}
 }
 
-func GenerateMultiplicationTriples(n int, r1, c1, r2, c2 int) ([][][]byte, [][][]byte, [][][]byte) {
+func GenerateMultiplicationTriples(n, r1, c1, r2, c2, amount int) []model.Triple {
+	triples := make([]model.Triple, amount)
+	for i := 0; i < amount; i++ {
+		triples[i] = GenerateMultiplicationTriple(n, r1, c1, r2, c2)
+	}
+	return triples
+}
+
+func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 	if c1 != r2 {
 		panic(fmt.Errorf("dimensions not suitable for matrix multiplication"))
 	}
@@ -66,7 +74,11 @@ func GenerateMultiplicationTriples(n int, r1, c1, r2, c2 int) ([][][]byte, [][][
 		panic(fmt.Errorf("c is not the product of a and b"))
 	}
 
-	return aShares, bShares, cShares
+	return model.Triple{
+		A: aShares,
+		B: bShares,
+		C: cShares,
+	}
 }
 
 // generateZeroMatrix generates a matrix of bytes with all elements set to zero
@@ -88,8 +100,9 @@ func AddMatrices(a, b [][]byte) {
 	}
 }
 
-func MultiplyMatricesShares(a, b [][]byte) [][]byte {
+func MultiplyMatricesShares(x, y [][]byte, multiplicationTriple model.Triple) [][]byte {
 	result := make([][]byte, 0)
+
 	return result
 }
 

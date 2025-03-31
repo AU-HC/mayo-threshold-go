@@ -4,21 +4,23 @@ import "mayo-threshold-go/model"
 
 const m = 64
 const k = 4
-const n = 0
-const o = 0
+const n = 81
+const o = 17
 const v = n - o
+
 const lambda = 2
 
 func ComputeM(parties []*model.Party) {
 	salt := Coin(parties, lambda)
-	t := make([]byte, 0) // TODO: Call hash function
+	t := make([]byte, 0)                                                  // TODO: Call hash function
+	triples := GenerateMultiplicationTriples(len(parties), k, v, v, o, m) // V: k x v, Li: v x o
 
 	for _, party := range parties {
 		V := RandMatrix(k, v)
 		M := make([][][]byte, m)
 
 		for i, Li := range party.EskShare.L {
-			M[i] = MultiplyMatrices(V, Li)
+			M[i] = MultiplyMatricesShares(V, Li, triples[i])
 		}
 
 		party.Salt = salt

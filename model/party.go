@@ -9,6 +9,7 @@ type Party struct {
 	M                 [][][]byte
 	Y                 [][][]byte
 	A                 [][]byte
+	R                 [][]byte
 	LittleY           []byte
 	Shares            map[string][][][]byte
 }

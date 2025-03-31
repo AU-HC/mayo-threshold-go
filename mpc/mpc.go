@@ -165,8 +165,9 @@ func LocalComputeY(parties []*model.Party) {
 			}
 		}
 
+		t := make([]byte, m) // TODO: This should be H(msg || salt)
 		for i := 0; i < m; i++ {
-			y[i] ^= party.T[i]
+			y[i] ^= t[i]
 		}
 		party.LittleY = y
 	}
@@ -184,27 +185,94 @@ func ComputeSignature(parties []*model.Party) {
 
 }
 
-func ComputeT(parties []*model.Party) {
-	/*for _, party := range parties {
-		A := party.A
-		s := len(A)
-		t := len(A[0])
+func ComputeT(parties []*model.Party) bool {
+	s := len(parties[0].A)
+	t := len(parties[0].A[0])
+	triplesStep2 := GenerateMultiplicationTriple(len(parties), s, t, t, t)
+	triplesStep3 := GenerateMultiplicationTriple(len(parties), s, s, s, t)
 
-		R := RandMatrix(s, s)
+	// Compute [A * S] = [A] * [S]
+	dShares := make([][][]byte, len(parties))
+	eShares := make([][][]byte, len(parties))
+	for partyNumber, party := range parties {
 		S := RandMatrix(t, t)
-		AS := MultiplyMatrices(A, S)
-		T := MultiplyMatrices(R, AS)
-		TOpened := make([][]byte, len(T)) // TODO: Open correctly
-		if Rank(TOpened) < s {
-			panic(1) // TODO
-		}
+
+		ai := triplesStep2.A[partyNumber]
+		bi := triplesStep2.B[partyNumber]
+		di := AddMatricesNew(party.A, ai)
+		ei := AddMatricesNew(S, bi)
+
+		dShares[partyNumber] = di
+		eShares[partyNumber] = ei
+	}
+	ATimesSShares := multiplicationProtocol(parties, triplesStep2, dShares, eShares, s, t, t, t)
+
+	// Compute [T] = [R] * [A * S]
+	dShares = make([][][]byte, len(parties))
+	eShares = make([][][]byte, len(parties))
+	for partyNumber, party := range parties {
+		party.R = RandMatrix(s, s)
+
+		ai := triplesStep3.A[partyNumber]
+		bi := triplesStep3.B[partyNumber]
+		di := AddMatricesNew(party.R, ai)
+		ei := AddMatricesNew(ATimesSShares[partyNumber], bi)
+
+		dShares[partyNumber] = di
+		eShares[partyNumber] = ei
+	}
+	TShares := multiplicationProtocol(parties, triplesStep3, dShares, eShares, s, s, s, t)
+
+	// Open T and check rank
+	T := generateZeroMatrix(s, t)
+	for _, tShare := range TShares {
+		AddMatrices(T, tShare)
 	}
 
-	*/
+	return rankOfMatrix(T) < s
 }
 
-func Rank(t [][]byte) int {
-	return 0 // TODO: Implement rank of matrix
+func rankOfMatrix(t [][]byte) int {
+	if len(t) == 0 || len(t[0]) == 0 {
+		return 0
+	}
+
+	rows, cols := len(t), len(t[0])
+	rank := 0
+
+	for col := 0; col < cols; col++ {
+		pivotRow := -1
+		for row := rank; row < rows; row++ {
+			if t[row][col] != 0 {
+				pivotRow = row
+				break
+			}
+		}
+
+		if pivotRow == -1 {
+			continue
+		}
+
+		t[pivotRow], t[rank] = t[rank], t[pivotRow]
+
+		pivot := t[rank][col]
+		for c := col; c < cols; c++ {
+			t[rank][c] /= pivot
+		}
+
+		for row := 0; row < rows; row++ {
+			if row != rank && t[row][col] != 0 {
+				factor := t[row][col]
+				for c := col; c < cols; c++ {
+					t[row][c] -= factor * t[rank][c]
+				}
+			}
+		}
+
+		rank++
+	}
+
+	return rank
 }
 
 func ComputeAInverse(parties []*model.Party) {

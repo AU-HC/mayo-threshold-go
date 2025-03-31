@@ -37,7 +37,7 @@ func main() {
 		fmt.Println("Matrix was rank-defect")
 	}
 	// Step 5 of solve
-	mpc.ComputeAInverse(parties) // TODO: implement
+	mpc.ComputeAInverse(parties) // TODO: CHECK A * A^-1
 	// Steps 6-9 of solve
 	mpc.Computex(parties) // TODO: implement
 	// ** Algorithm solve **

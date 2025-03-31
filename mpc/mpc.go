@@ -304,6 +304,8 @@ func ComputeAInverse(parties []*model.Party) {
 	for j, party := range parties {
 		party.AInverse = zShares[j]
 	}
+
+	// TODO: CHECK A * A^-1
 }
 
 func generateMulAndInvTable() ([][]byte, []byte) {

@@ -17,30 +17,58 @@ func ComputeM(parties []*model.Party) {
 
 	for _, party := range parties {
 		V := RandMatrix(k, v)
-		M := make([][][]byte, m)
-
-		for i, Li := range party.EskShare.L {
-			M[i] = MultiplyMatricesShares(V, Li, triples[i])
-		}
-
 		party.Salt = salt
 		party.T = t
-		party.M = M
 		party.V = V
+	}
+
+	for i := 0; i < m; i++ {
+		dShares := make([][][]byte, len(parties))
+		eShares := make([][][]byte, len(parties))
+
+		// Compute locally
+		for partyNumber, party := range parties {
+			ai := triples[i].A[partyNumber]
+			bi := triples[i].B[partyNumber]
+			di := AddMatricesNew(party.V, ai)
+			ei := AddMatricesNew(party.EskShare.L[i], bi)
+
+			dShares[partyNumber] = di
+			eShares[partyNumber] = ei
+		}
+
+		// Open d and e
+		d := generateZeroMatrix(k, v)
+		e := generateZeroMatrix(v, o)
+		for j := range parties {
+			AddMatrices(d, dShares[j])
+			AddMatrices(e, eShares[j])
+		}
+
+		// Compute locally
+		for partyNumber, party := range parties {
+			M := make([][][]byte, m)
+			for j := range party.EskShare.L {
+				a := triples[j].A[partyNumber]
+				b := triples[j].B[partyNumber]
+				c := triples[j].C[partyNumber]
+
+				db := MultiplyMatrices(d, b) // d * [b]
+				de := MultiplyMatrices(d, e) // d * e
+				ea := MultiplyMatrices(a, e) // e * [a]
+				AddMatrices(db, ea)          // d * [b] + e * [a]
+				AddMatrices(db, c)           // d * [b] + e * [a] + [c]
+				AddMatrices(db, de)          // d * [b] + e * [a] + [c] + d * e
+
+				M[i] = db // k x o
+			}
+			party.M = M
+		}
 	}
 }
 
 func ComputeY(parties []*model.Party) {
-	for _, party := range parties {
-		V := party.V
-		Y := make([][][]byte, m)
 
-		for i, P1i := range party.Epk.P1 {
-			Y[i] = MultiplyMatrices(MultiplyMatrixWithConstantMatrix(V, P1i), MatrixTranspose(V))
-		}
-
-		party.Y = Y
-	}
 }
 
 func LocalComputeA(parties []*model.Party) {
@@ -64,7 +92,7 @@ func ComputeSignature(parties []*model.Party) {
 }
 
 func ComputeT(parties []*model.Party) {
-	for _, party := range parties {
+	/*for _, party := range parties {
 		A := party.A
 		s := len(A)
 		t := len(A[0])
@@ -78,6 +106,8 @@ func ComputeT(parties []*model.Party) {
 			panic(1) // TODO
 		}
 	}
+
+	*/
 }
 
 func Rank(t [][]byte) int {

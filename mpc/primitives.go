@@ -63,7 +63,7 @@ func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 
 	// Reconstruct a, b, c
 	aReconstructed := generateZeroMatrix(r1, c1)
-	bReconstructed := generateZeroMatrix(r1, c1)
+	bReconstructed := generateZeroMatrix(r2, c2)
 	cReconstructed := generateZeroMatrix(r1, c2)
 	for i := 0; i < n-1; i++ {
 		AddMatrices(aReconstructed, aShares[i])
@@ -93,6 +93,10 @@ func generateZeroMatrix(rows, columns int) [][]byte {
 }
 
 func AddMatrices(a, b [][]byte) {
+	if len(a) != len(b) && len(a[0]) != len(b[0]) {
+		panic(fmt.Errorf("a and b do not have the same dimensions "))
+	}
+
 	for i := range a {
 		for j := range a[i] {
 			a[i][j] ^= b[i][j]
@@ -100,10 +104,20 @@ func AddMatrices(a, b [][]byte) {
 	}
 }
 
-func MultiplyMatricesShares(x, y [][]byte, multiplicationTriple model.Triple) [][]byte {
-	result := make([][]byte, 0)
+func AddMatricesNew(a, b [][]byte) [][]byte {
+	if len(a) != len(b) && len(a[0]) != len(a[0]) {
+		panic(fmt.Errorf("a and b do not have the same dimensions"))
+	}
 
-	return result
+	c := generateZeroMatrix(len(a), len(a[0]))
+
+	for i := range a {
+		for j := range a[i] {
+			c[i][j] = a[i][j] ^ b[i][j]
+		}
+	}
+
+	return c
 }
 
 func MultiplyMatrices(A, B [][]byte) [][]byte {
@@ -145,11 +159,6 @@ func gf16Mul(a, b byte) byte {
 	r = (r ^ reducedOverFlowBits) & 0x0F
 
 	return r
-}
-
-func MultiplyMatrixWithConstantMatrix(a, b [][]byte) [][]byte {
-	result := make([][]byte, 0)
-	return result
 }
 
 func MatrixTranspose(a [][]byte) [][]byte {

@@ -54,9 +54,9 @@ func GenerateMultiplicationTriples(n int, r1, c1, r2, c2 int) ([][][]byte, [][][
 	cShares[n-1] = c
 
 	// Reconstruct a, b, c
-	aReconstructed := RandMatrix(r1, c1)
-	bReconstructed := RandMatrix(r2, c2)
-	cReconstructed := MultiplyMatrices(a, b)
+	aReconstructed := generateZeroMatrix(r1, c1)
+	bReconstructed := generateZeroMatrix(r1, c1)
+	cReconstructed := generateZeroMatrix(r1, c2)
 	for i := 0; i < n-1; i++ {
 		AddMatrices(aReconstructed, aShares[i])
 		AddMatrices(bReconstructed, bShares[i])
@@ -67,6 +67,17 @@ func GenerateMultiplicationTriples(n int, r1, c1, r2, c2 int) ([][][]byte, [][][
 	}
 
 	return aShares, bShares, cShares
+}
+
+// generateZeroMatrix generates a matrix of bytes with all elements set to zero
+func generateZeroMatrix(rows, columns int) [][]byte {
+	matrix := make([][]byte, rows)
+
+	for i := 0; i < rows; i++ {
+		matrix[i] = make([]byte, columns)
+	}
+
+	return matrix
 }
 
 func AddMatrices(a, b [][]byte) {

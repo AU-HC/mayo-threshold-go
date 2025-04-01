@@ -1,6 +1,7 @@
 package mpc
 
 import (
+	"fmt"
 	"mayo-threshold-go/model"
 	"reflect"
 )
@@ -12,6 +13,8 @@ const o = 17
 const v = n - o
 
 const lambda = 2
+
+var TShares [][][]byte
 
 func ComputeM(parties []*model.Party) {
 	salt := Coin(parties, lambda)
@@ -221,7 +224,7 @@ func ComputeT(parties []*model.Party) bool {
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	TShares := multiplicationProtocol(parties, triplesStep3, dShares, eShares, s, s, s, t)
+	TShares = multiplicationProtocol(parties, triplesStep3, dShares, eShares, s, s, s, t)
 
 	// Open T and check rank
 	T := generateZeroMatrix(s, t)
@@ -233,7 +236,12 @@ func ComputeT(parties []*model.Party) bool {
 		party.T = T
 	}
 
-	return rankOfMatrix(T) < s
+	copyOfT := generateZeroMatrix(s, t)
+	for row := 0; row < len(T); row++ {
+		copy(copyOfT[row][:], T[row][:])
+	}
+
+	return rankOfMatrix(copyOfT) < s
 }
 
 func rankOfMatrix(t [][]byte) int {
@@ -301,11 +309,22 @@ func ComputeAInverse(parties []*model.Party) {
 
 	// Open d, e and compute locally
 	zShares := multiplicationProtocol(parties, triple, dShares, eShares, t, s, s, s)
-	for j, party := range parties {
-		party.AInverse = zShares[j]
+	for i, party := range parties {
+		party.AInverse = zShares[i]
 	}
 
-	// TODO: CHECK A * A^-1
+	// TODO: Remove this check when benchmarking
+	ARecovered := generateZeroMatrix(s, t)
+	AInverseRecovered := generateZeroMatrix(t, s)
+	for _, party := range parties {
+		AddMatrices(ARecovered, party.A)
+		AddMatrices(AInverseRecovered, party.AInverse)
+	}
+
+	Identity := MultiplyMatrices(ARecovered, AInverseRecovered)
+	for _, row := range Identity {
+		fmt.Println(fmt.Sprintf("%2d", row))
+	}
 }
 
 func generateMulAndInvTable() ([][]byte, []byte) {
@@ -395,5 +414,68 @@ func RightInverse(t [][]byte) [][]byte {
 }
 
 func Computex(parties []*model.Party) {
+	s := len(parties[0].A)
+	t := len(parties[0].A[0])
 
+	basis := RandVector(t - s)
+
+	for _, party := range parties {
+		var z byte
+		zVector := RandVector(t - s)
+
+		for i := 0; i < t-s; i++ {
+			z ^= gf16Mul(zVector[i], basis[i])
+		}
+
+		party.Z = z
+	}
+
+	triplesStep7 := GenerateMultiplicationTriple(len(parties), t, s, s, 1)
+	triplesStep8 := GenerateMultiplicationTriple(len(parties), t, t, t, 1)
+	// Compute [A^-1] * [b]
+	dShares := make([][][]byte, len(parties))
+	eShares := make([][][]byte, len(parties))
+	for partyNumber, party := range parties {
+		party.S = RandMatrix(t, t)
+
+		ai := triplesStep7.A[partyNumber]
+		bi := triplesStep7.B[partyNumber]
+		di := AddMatricesNew(party.AInverse, ai)
+		ei := AddMatricesNew(vectorToMatrix(party.LittleY), bi)
+
+		dShares[partyNumber] = di
+		eShares[partyNumber] = ei
+	}
+	//ATimesB := multiplicationProtocol(parties, triplesStep7, dShares, eShares, t, s, s, 1)
+
+	// Compute [S] * [z]
+	dShares = make([][][]byte, len(parties))
+	eShares = make([][][]byte, len(parties))
+	for partyNumber, party := range parties {
+		party.R = RandMatrix(s, s)
+
+		ai := triplesStep8.A[partyNumber]
+		//bi := triplesStep8.B[partyNumber]
+		di := AddMatricesNew(party.S, ai)
+		//ei := AddMatricesNew(vectorToMatrix(party.Z), bi)
+
+		dShares[partyNumber] = di
+		//eShares[partyNumber] = ei
+	}
+	//STimesZ := multiplicationProtocol(parties, triplesStep8, dShares, eShares, t, t, t, 1)
+
+	// [x] = [A^-1] * [b] + [S] * [z]
+	//for i, party := range parties {
+	//	AddMatrices(STimesZ[i], ATimesB[i])
+	//}
+}
+
+func vectorToMatrix(x []byte) [][]byte {
+	result := make([][]byte, len(x))
+
+	for i, elem := range x {
+		result[i] = []byte{elem}
+	}
+
+	return result
 }

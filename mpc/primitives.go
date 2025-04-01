@@ -93,7 +93,7 @@ func generateZeroMatrix(rows, columns int) [][]byte {
 }
 
 func AddMatrices(a, b [][]byte) {
-	if len(a) != len(b) && len(a[0]) != len(b[0]) {
+	if len(a) != len(b) || len(a[0]) != len(b[0]) {
 		panic(fmt.Errorf("a and b do not have the same dimensions "))
 	}
 
@@ -105,7 +105,7 @@ func AddMatrices(a, b [][]byte) {
 }
 
 func AddMatricesNew(a, b [][]byte) [][]byte {
-	if len(a) != len(b) && len(a[0]) != len(b[0]) {
+	if len(a) != len(b) || len(a[0]) != len(b[0]) {
 		panic(fmt.Errorf("a and b do not have the same dimensions"))
 	}
 
@@ -247,6 +247,16 @@ func RandMatrix(r, c int) [][]byte {
 			row[j] = rand.SampleFieldElement()
 		}
 		result[i] = row
+	}
+
+	return result
+}
+
+func RandVector(c int) []byte {
+	result := make([]byte, c)
+
+	for i := 0; i < c; i++ {
+		result[i] = rand.SampleFieldElement()
 	}
 
 	return result

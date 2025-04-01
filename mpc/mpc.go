@@ -14,8 +14,6 @@ const v = n - o
 
 const lambda = 2
 
-var TShares [][][]byte
-
 func ComputeM(parties []*model.Party) {
 	salt := Coin(parties, lambda)
 	//t := make([]byte, 0)                                                  // TODO: Call hash function
@@ -224,7 +222,7 @@ func ComputeT(parties []*model.Party) bool {
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	TShares = multiplicationProtocol(parties, triplesStep3, dShares, eShares, s, s, s, t)
+	TShares := multiplicationProtocol(parties, triplesStep3, dShares, eShares, s, s, s, t)
 
 	// Open T and check rank
 	T := generateZeroMatrix(s, t)

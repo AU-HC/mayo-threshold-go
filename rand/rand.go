@@ -6,7 +6,6 @@ import (
 	"crypto/sha3"
 )
 
-// SampleFieldElement TODO: sample random value
 func SampleFieldElement() byte {
 	buf := make([]byte, 1)
 

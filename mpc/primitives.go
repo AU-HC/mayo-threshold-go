@@ -30,7 +30,7 @@ func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 	for i := 0; i < n-1; i++ {
 		aShares[i] = RandMatrix(r1, c1)
 		bShares[i] = RandMatrix(r2, c2)
-		cShares[i] = RandMatrix(r1, c2) // TODO: check
+		cShares[i] = RandMatrix(r1, c2)
 
 		AddMatrices(a, aShares[i])
 		AddMatrices(b, bShares[i])

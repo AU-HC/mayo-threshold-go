@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"mayo-threshold-go/mock"
 	"mayo-threshold-go/mpc"
@@ -45,5 +46,5 @@ func main() {
 	// Step 7-9 of sign
 	signature := mpc.ComputeSPrime(parties)
 
-	fmt.Println(signature)
+	fmt.Println(hex.EncodeToString(signature.Encode()))
 }

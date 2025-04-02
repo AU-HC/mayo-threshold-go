@@ -131,14 +131,6 @@ func ComputeAInverse(parties []*model.Party) {
 	for i, party := range parties {
 		party.AInverse = zShares[i]
 	}
-
-	// TODO: Remove this check when benchmarking
-	ARecovered := generateZeroMatrix(s, t)
-	AInverseRecovered := generateZeroMatrix(t, s)
-	for _, party := range parties {
-		AddMatrices(ARecovered, party.A)
-		AddMatrices(AInverseRecovered, party.AInverse)
-	}
 }
 
 func RightInverse(t [][]byte) [][]byte {

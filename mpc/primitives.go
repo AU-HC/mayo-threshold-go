@@ -61,6 +61,21 @@ func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 	}
 }
 
+func matrixify(v []byte, rows, cols int) [][]byte {
+	if len(v) != rows*cols {
+		panic(fmt.Errorf("a does not have the correct dimensions for matrixify"))
+	}
+
+	matrix := make([][]byte, rows)
+	for i := 0; i < rows; i++ {
+		matrix[i] = make([]byte, cols)
+		for j := 0; j < cols; j++ {
+			matrix[i][j] = v[i*cols+j]
+		}
+	}
+	return matrix
+}
+
 // generateZeroMatrix generates a matrix of bytes with all elements set to zero
 func generateZeroMatrix(rows, columns int) [][]byte {
 	matrix := make([][]byte, rows)

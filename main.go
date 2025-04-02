@@ -20,7 +20,7 @@ func main() {
 	// Begin signing the message
 	for true {
 		// Steps 1-3 of sign
-		mpc.ComputeM(parties)
+		mpc.ComputeM(parties, []byte("Hello, world!"))
 		// Step 4 of sign
 		mpc.ComputeY(parties)
 		// Step 5 of sign
@@ -42,8 +42,8 @@ func main() {
 	mpc.ComputeLittleX(parties) // TODO: figure out if the spec is correct / test
 	// ** Algorithm solve **
 
-	// Step 7-8 of sign
-	mpc.ComputeSPrime(parties) // TODO: figure matrixify and dimensions
-	// step 9 of sign
-	mpc.ComputeSignature(parties) // TODO: implement
+	// Step 7-9 of sign
+	signature := mpc.ComputeSPrime(parties)
+
+	fmt.Println(signature)
 }

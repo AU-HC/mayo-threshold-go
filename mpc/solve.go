@@ -139,11 +139,6 @@ func ComputeAInverse(parties []*model.Party) {
 		AddMatrices(ARecovered, party.A)
 		AddMatrices(AInverseRecovered, party.AInverse)
 	}
-
-	Identity := MultiplyMatrices(ARecovered, AInverseRecovered)
-	for _, row := range Identity {
-		fmt.Println(fmt.Sprintf("%2d", row))
-	}
 }
 
 func RightInverse(t [][]byte) [][]byte {
@@ -299,7 +294,7 @@ func Kernel(T [][]byte) [][]byte {
 
 	// Add the identity matrix below T
 	Identity := generateIdentityMatrix(cols)
-	TWithIdentity := appendMatrixBelow(T, Identity)
+	TWithIdentity := appendMatrixVertical(T, Identity)
 
 	// Perform Gaussian elimination
 	EchelonForm := echelonForm(MatrixTranspose(TWithIdentity))
@@ -369,9 +364,9 @@ func MultiplyVecConstant(b byte, a []byte) []byte {
 	return C
 }
 
-func appendMatrixBelow(A, B [][]byte) [][]byte {
+func appendMatrixVertical(A, B [][]byte) [][]byte {
 	if len(A[0]) != len(B[0]) {
-		panic(123)
+		panic("Cannot append matrices of different column count")
 	}
 
 	resultSize := len(A) + len(B)
@@ -383,6 +378,20 @@ func appendMatrixBelow(A, B [][]byte) [][]byte {
 
 	for i := 0; i < len(B); i++ {
 		result[i+len(A)] = B[i]
+	}
+
+	return result
+}
+
+func appendMatrixHorizontal(A, B [][]byte) [][]byte {
+	if len(A) != len(B) {
+		panic("Cannot append matrices of different row count")
+	}
+
+	result := make([][]byte, len(A))
+
+	for i := 0; i < len(A); i++ {
+		result[i] = append(A[i], B[i]...)
 	}
 
 	return result

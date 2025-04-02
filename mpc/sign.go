@@ -2,6 +2,7 @@ package mpc
 
 import (
 	"mayo-threshold-go/model"
+	"mayo-threshold-go/rand"
 	"reflect"
 )
 
@@ -13,9 +14,9 @@ const v = n - o
 
 const lambda = 2
 
-func ComputeM(parties []*model.Party) {
+func ComputeM(parties []*model.Party, message []byte) {
 	salt := Coin(parties, lambda)
-	//t := make([]byte, 0)                                                  // TODO: Call hash function
+	t := rand.Shake256(m, message, salt)
 	triples := GenerateMultiplicationTriples(len(parties), k, v, v, o, m) // V: k x v, Li: v x o
 
 	VReconstructed := generateZeroMatrix(k, v)
@@ -23,8 +24,8 @@ func ComputeM(parties []*model.Party) {
 		V := RandMatrix(k, v)
 		AddMatrices(VReconstructed, V)
 		party.Salt = salt
-		//party.T = t
 		party.V = V
+		party.LittleT = t
 		party.M = make([][][]byte, m)
 		party.Y = make([][][]byte, m)
 	}
@@ -165,7 +166,7 @@ func LocalComputeY(parties []*model.Party) {
 			}
 		}
 
-		t := make([]byte, m) // TODO: This should be H(msg || salt)
+		t := party.LittleT
 		for i := 0; i < m; i++ {
 			y[i] ^= t[i]
 		}
@@ -173,13 +174,13 @@ func LocalComputeY(parties []*model.Party) {
 	}
 }
 
-func ComputeSPrime(parties []*model.Party) {
+func ComputeSPrime(parties []*model.Party) model.Signature {
 	// [X * O^T] = [X] * [O^t]
-	triple := GenerateMultiplicationTriple(len(parties), k, v, v, k) // TODO: figure out dimensions
+	triple := GenerateMultiplicationTriple(len(parties), k, o, o, v)
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		party.X = RandMatrix(0, 0) // TODO: Implement matrixify and figure out dimensions
+		party.X = matrixify(party.LittleX, k, o)
 
 		ai := triple.A[partyNumber]
 		bi := triple.B[partyNumber]
@@ -191,29 +192,29 @@ func ComputeSPrime(parties []*model.Party) {
 	}
 
 	// Open d, e and compute locally
-	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares, k, v, v, k) // TODO: figure out dimensions
+	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares, k, o, o, v)
 
 	// [S'] = [V + (OX^T)^T)]
 	for i, party := range parties {
-		party.SPrimeShares = AddMatricesNew(party.V, MatrixTranspose(xTimesOTransposedShares[i])) // TODO: figure out dimensions, are they equal since matrix addition?
+		party.SPrimeShares = AddMatricesNew(party.V, xTimesOTransposedShares[i])
 	}
 
 	// Open S'
-	SPrime := generateZeroMatrix(0, 0) // TODO: figure out dimensions
+	// Open X
+	// TODO: Figure out if we should open X
+	SPrime := generateZeroMatrix(k, v)
+	xOpen := generateZeroMatrix(k, o)
 	for _, party := range parties {
 		AddMatrices(SPrime, party.SPrimeShares)
+		AddMatrices(xOpen, party.X)
 	}
-	for _, party := range parties {
-		party.SPrime = SPrime
+
+	s := appendMatrixHorizontal(SPrime, xOpen)
+
+	return model.Signature{
+		S:    s,
+		Salt: parties[0].Salt,
 	}
-}
-
-func ComputeS(parties []*model.Party) {
-
-}
-
-func ComputeSignature(parties []*model.Party) {
-
 }
 
 func vectorToMatrix(x []byte) [][]byte {

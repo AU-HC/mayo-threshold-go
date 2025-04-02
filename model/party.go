@@ -4,6 +4,7 @@ type Party struct {
 	EskShare          ExpandedSecretKey
 	Epk               ExpandedPublicKey
 	Salt              []byte
+	LittleT           []byte
 	T                 [][]byte
 	V, VReconstructed [][]byte
 	M                 [][][]byte

@@ -39,7 +39,7 @@ func main() {
 	// Step 5 of solve
 	mpc.ComputeAInverse(parties)
 	// Steps 6-9 of solve
-	mpc.ComputeLittleX(parties) // TODO: figure out if the spec is correct / implement
+	mpc.ComputeLittleX(parties) // TODO: figure out if the spec is correct
 	// ** Algorithm solve **
 
 	// Step 7-8 of sign

@@ -221,19 +221,24 @@ func ComputeLittleX(parties []*model.Party) {
 
 	basis := Kernel(parties[0].T)
 
-	for _, _ = range parties {
-		z := make([]byte, t-s)
+	if len(basis) != t-s {
+		panic(fmt.Errorf("length of basis is incorrect"))
+	}
+
+	for _, party := range parties {
+		z := make([]byte, t)
 		zVector := RandVector(t - s)
 
-		for i := 0; i < t-s; i++ {
-			z = AddVec(z, MultiplyVecConstant(zVector[i], basis[i]))
+		for index, elem := range zVector {
+			z = AddVec(z, MultiplyVecConstant(elem, basis[index]))
 		}
 
-		//party.Z = z
+		party.Z = z
 	}
 
 	triplesStep7 := GenerateMultiplicationTriple(len(parties), t, s, s, 1)
 	triplesStep8 := GenerateMultiplicationTriple(len(parties), t, t, t, 1)
+
 	// Compute [A^-1] * [b]
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
@@ -257,19 +262,34 @@ func ComputeLittleX(parties []*model.Party) {
 		party.R = RandMatrix(s, s)
 
 		ai := triplesStep8.A[partyNumber]
-		//bi := triplesStep8.B[partyNumber]
+		bi := triplesStep8.B[partyNumber]
 		di := AddMatricesNew(party.S, ai)
-		//ei := AddMatricesNew(vectorToMatrix(party.Z), bi)
+		ei := AddMatricesNew(vectorToMatrix(party.Z), bi)
 
 		dShares[partyNumber] = di
-		//eShares[partyNumber] = ei
+		eShares[partyNumber] = ei
 	}
 	STimesZ := multiplicationProtocol(parties, triplesStep8, dShares, eShares, t, t, t, 1)
 
 	// [x] = [A^-1] * [b] + [S] * [z]
 	for i, _ := range parties {
-		AddMatrices(STimesZ[i], ATimesB[i])
+		AddMatrices(ATimesB[i], STimesZ[i])
 	}
+
+	for i, party := range parties {
+		party.LittleX = matrixToVec(ATimesB[i])
+	}
+}
+
+// matrixToVec takes a column vector (as a matrix) and returns a row vector
+func matrixToVec(A [][]byte) []byte {
+	result := make([]byte, len(A))
+
+	for index, elem := range A {
+		result[index] = elem[0]
+	}
+
+	return result
 }
 
 func Kernel(T [][]byte) [][]byte {

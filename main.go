@@ -42,10 +42,8 @@ func main() {
 	mpc.ComputeLittleX(parties) // TODO: figure out if the spec is correct / implement
 	// ** Algorithm solve **
 
-	// Step 7 of sign
-	mpc.ComputeX(parties) // TODO: implement
-	// step 8 of sign
-	mpc.ComputeS(parties) // TODO: implement
+	// Step 7-8 of sign
+	mpc.ComputeSPrime(parties) // TODO: figure matrixify and dimensions
 	// step 9 of sign
 	mpc.ComputeSignature(parties) // TODO: implement
 }

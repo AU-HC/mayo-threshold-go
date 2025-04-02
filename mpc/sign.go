@@ -173,8 +173,39 @@ func LocalComputeY(parties []*model.Party) {
 	}
 }
 
-func ComputeX(parties []*model.Party) {
+func ComputeSPrime(parties []*model.Party) {
+	// [X * O^T] = [X] * [O^t]
+	triple := GenerateMultiplicationTriple(len(parties), k, v, v, k) // TODO: figure out dimensions
+	dShares := make([][][]byte, len(parties))
+	eShares := make([][][]byte, len(parties))
+	for partyNumber, party := range parties {
+		party.X = RandMatrix(0, 0) // TODO: Implement matrixify and figure out dimensions
 
+		ai := triple.A[partyNumber]
+		bi := triple.B[partyNumber]
+		di := AddMatricesNew(party.X, ai)
+		ei := AddMatricesNew(MatrixTranspose(party.EskShare.O), bi)
+
+		dShares[partyNumber] = di
+		eShares[partyNumber] = ei
+	}
+
+	// Open d, e and compute locally
+	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares, k, v, v, k) // TODO: figure out dimensions
+
+	// [S'] = [V + (OX^T)^T)]
+	for i, party := range parties {
+		party.SPrimeShares = AddMatricesNew(party.V, MatrixTranspose(xTimesOTransposedShares[i])) // TODO: figure out dimensions, are they equal since matrix addition?
+	}
+
+	// Open S'
+	SPrime := generateZeroMatrix(0, 0) // TODO: figure out dimensions
+	for _, party := range parties {
+		AddMatrices(SPrime, party.SPrimeShares)
+	}
+	for _, party := range parties {
+		party.SPrime = SPrime
+	}
 }
 
 func ComputeS(parties []*model.Party) {

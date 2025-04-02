@@ -12,8 +12,10 @@ type Party struct {
 	AInverse          [][]byte
 	R                 [][]byte
 	S                 [][]byte
-	X                 []byte
+	SPrimeShares      [][]byte
+	SPrime            [][]byte
+	X                 [][]byte
+	LittleX           []byte
 	LittleY           []byte
 	Z                 byte
-	Shares            map[string][][][]byte
 }

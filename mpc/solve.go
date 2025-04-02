@@ -256,12 +256,12 @@ func ComputeLittleX(parties []*model.Party) {
 		party.R = RandMatrix(s, s)
 
 		ai := triplesStep8.A[partyNumber]
-		bi := triplesStep8.B[partyNumber]
+		//bi := triplesStep8.B[partyNumber]
 		di := AddMatricesNew(party.S, ai)
-		ei := AddMatricesNew(vectorToMatrix(party.Z), bi)
+		//ei := AddMatricesNew(vectorToMatrix(party.Z), bi)
 
 		dShares[partyNumber] = di
-		eShares[partyNumber] = ei
+		//eShares[partyNumber] = ei
 	}
 	STimesZ := multiplicationProtocol(parties, triplesStep8, dShares, eShares, t, t, t, 1)
 

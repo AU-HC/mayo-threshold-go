@@ -3,6 +3,7 @@ package mpc
 import (
 	"fmt"
 	"mayo-threshold-go/model"
+	"slices"
 )
 
 func ComputeT(parties []*model.Party) bool {
@@ -218,17 +219,17 @@ func ComputeLittleX(parties []*model.Party) {
 	s := len(parties[0].A)
 	t := len(parties[0].A[0])
 
-	basis := RandVector(t - s)
+	basis := Kernel(parties[0].T)
 
-	for _, party := range parties {
-		var z byte
+	for _, _ = range parties {
+		z := make([]byte, t-s)
 		zVector := RandVector(t - s)
 
 		for i := 0; i < t-s; i++ {
-			z ^= gf16Mul(zVector[i], basis[i])
+			z = AddVec(z, MultiplyVecConstant(zVector[i], basis[i]))
 		}
 
-		party.Z = z
+		//party.Z = z
 	}
 
 	triplesStep7 := GenerateMultiplicationTriple(len(parties), t, s, s, 1)
@@ -269,4 +270,260 @@ func ComputeLittleX(parties []*model.Party) {
 	for i, _ := range parties {
 		AddMatrices(STimesZ[i], ATimesB[i])
 	}
+}
+
+func Kernel(T [][]byte) [][]byte {
+	rows := len(T)    // s
+	cols := len(T[0]) // t
+	basis := make([][]byte, 0)
+
+	// Add the identity matrix below T
+	Identity := generateIdentityMatrix(cols)
+	TWithIdentity := appendMatrixBelow(T, Identity)
+
+	// Perform Gaussian elimination
+	EchelonForm := echelonForm(MatrixTranspose(TWithIdentity))
+
+	// Determine the basis which are the rows where the first s values are 0
+	for i := rows; i < len(EchelonForm); i++ { // Look at the added identity rows
+		isKernelVector := true
+		for j := 0; j < rows; j++ {
+			if EchelonForm[i][j] != 0 {
+				isKernelVector = false
+				break
+			}
+		}
+		if isKernelVector {
+			basis = append(basis, EchelonForm[i][rows:])
+		}
+	}
+
+	return basis
+}
+
+func echelonForm(B [][]byte) [][]byte {
+	rows := len(B)
+	cols := len(B[0])
+	pivotColumn := 0
+	pivotRow := 0
+
+	// TODO: Fix
+	field := InitField()
+
+	for pivotRow < rows && pivotColumn < cols+1 {
+		var possiblePivots []int
+		for i := pivotRow; i < rows; i++ {
+			if B[i][pivotColumn] != 0 {
+				possiblePivots = append(possiblePivots, i)
+			}
+		}
+
+		if len(possiblePivots) == 0 {
+			pivotColumn++
+			continue
+		}
+
+		nextPivotRow := slices.Min(possiblePivots)
+		B[pivotRow], B[nextPivotRow] = B[nextPivotRow], B[pivotRow]
+
+		// Make the leading entry a 1
+		B[pivotRow] = MultiplyVecConstant(field.Gf16Inv(B[pivotRow][pivotColumn]), B[pivotRow])
+
+		// Eliminate entries below the pivot
+		for row := nextPivotRow + 1; row < rows; row++ {
+			B[row] = AddVec(B[row], MultiplyVecConstant(B[row][pivotColumn], B[pivotRow]))
+		}
+
+		pivotRow++
+		pivotColumn++
+	}
+
+	return B
+}
+
+func MultiplyVecConstant(b byte, a []byte) []byte {
+	C := make([]byte, len(a))
+	for i := range C {
+		C[i] = gf16Mul(b, a[i])
+	}
+	return C
+}
+
+func appendMatrixBelow(A, B [][]byte) [][]byte {
+	if len(A[0]) != len(B[0]) {
+		panic(123)
+	}
+
+	resultSize := len(A) + len(B)
+	result := make([][]byte, resultSize)
+
+	for i := 0; i < len(A); i++ {
+		result[i] = A[i]
+	}
+
+	for i := 0; i < len(B); i++ {
+		result[i+len(A)] = B[i]
+	}
+
+	return result
+}
+
+type Field struct {
+	mulTable [][]byte
+	invTable []byte
+}
+
+func InitField() *Field {
+	mulTable, invTable := generateMulAndInvTable()
+
+	return &Field{
+		mulTable: mulTable,
+		invTable: invTable,
+	}
+}
+
+func (f *Field) VectorTransposedMatrixMul(vec []byte, matrix [][]byte) []byte {
+	cols := len(matrix)
+	if cols == 0 || len(vec) != len(matrix) {
+		panic("Vector length must match matrix row count")
+	}
+
+	rows := len(matrix[0])
+	result := make([]byte, rows)
+
+	for i := 0; i < rows; i++ {
+		var sum byte
+		for j := 0; j < cols; j++ {
+			sum ^= f.Gf16Mul(vec[j], matrix[j][i])
+		}
+		result[i] = sum
+	}
+
+	return result
+}
+
+// MatrixVectorMul Takes a matrix and vector, here we assume that the output of this multiplication will be a
+// vector, since this is the case in MAYO.
+func (f *Field) MatrixVectorMul(matrix [][]byte, vec []byte) []byte {
+	rows := len(matrix)
+	if rows == 0 || len(vec) != len(matrix[0]) {
+		panic("Vector length must match matrix column count")
+	}
+
+	cols := len(matrix[0])
+	result := make([]byte, rows)
+
+	for i := 0; i < rows; i++ {
+		var sum byte
+		for j := 0; j < cols; j++ {
+			sum ^= f.Gf16Mul(vec[j], matrix[i][j])
+		}
+		result[i] = sum
+	}
+
+	return result
+}
+
+// MultiplyMatrices multiplies two matrices
+func (f *Field) MultiplyMatrices(A, B [][]byte) [][]byte {
+	rowsA, colsA := len(A), len(A[0])
+	rowsB, colsB := len(B), len(B[0])
+
+	if colsA != rowsB {
+		panic(fmt.Sprintf("Cannot multiply matrices colsA: '%d', rowsB: '%d'", colsA, rowsB))
+	}
+
+	C := make([][]byte, rowsA)
+	for i := range C {
+		C[i] = make([]byte, colsB)
+		for j := 0; j < colsB; j++ {
+			for k := 0; k < colsA; k++ {
+				C[i][j] ^= f.Gf16Mul(A[i][k], B[k][j])
+			}
+		}
+	}
+
+	return C
+}
+
+// MultiplyVecConstant multiplies a vector by a constant element-wise
+func (f *Field) MultiplyVecConstant(b byte, a []byte) []byte {
+	C := make([]byte, len(a))
+	for i := range C {
+		C[i] = f.Gf16Mul(b, a[i])
+	}
+	return C
+}
+
+// Gf16Mul multiplies two elements in GF(16)
+func (f *Field) Gf16Mul(a, b byte) byte {
+	return f.mulTable[a][b]
+}
+
+// Gf16Inv calculates the inverse of an element in GF(16)
+func (f *Field) Gf16Inv(a byte) byte {
+	return f.invTable[a]
+}
+
+func (f *Field) VecInnerProduct(vec1Transposed []byte, vec2 []byte) byte {
+	if len(vec1Transposed) != len(vec2) {
+		panic("Vectors must have the same length")
+	}
+
+	var result byte = 0
+	for i := 0; i < len(vec1Transposed); i++ {
+		result ^= f.Gf16Mul(vec1Transposed[i], vec2[i])
+	}
+
+	return result
+}
+
+func gf16Mul(a, b byte) byte {
+	var r byte
+
+	// Multiply each coefficient with y
+	r = (a & 0x1) * b
+	r ^= (a & 0x2) * b
+	r ^= (a & 0x4) * b
+	r ^= (a & 0x8) * b
+
+	overFlowBits := r & 0xF0
+
+	// Reduce with respect to x^4 + x + 1
+	reducedOverFlowBits := overFlowBits>>4 ^ overFlowBits>>3
+
+	// Subtract and remove overflow bits
+	r = (r ^ reducedOverFlowBits) & 0x0F
+
+	return r
+}
+
+func generateMulAndInvTable() ([][]byte, []byte) {
+	mulTable := make([][]byte, 16)
+	invTable := make([]byte, 16)
+
+	for i := 0; i < 16; i++ {
+		mulTable[i] = make([]byte, 16)
+		for j := 0; j < 16; j++ {
+			mulTable[i][j] = gf16Mul(byte(i), byte(j))
+
+			if mulTable[i][j] == 1 {
+				invTable[i] = byte(j)
+			}
+		}
+	}
+	return mulTable, invTable
+}
+
+func AddVec(A, B []byte) []byte {
+	if len(A) != len(B) {
+		panic("Cannot add vectors of different lengths")
+	}
+
+	C := make([]byte, len(A))
+	for i := range C {
+		C[i] = A[i] ^ B[i]
+	}
+
+	return C
 }

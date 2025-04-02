@@ -216,23 +216,6 @@ func ComputeSignature(parties []*model.Party) {
 
 }
 
-func generateMulAndInvTable() ([][]byte, []byte) {
-	mulTable := make([][]byte, 16)
-	invTable := make([]byte, 16)
-
-	for i := 0; i < 16; i++ {
-		mulTable[i] = make([]byte, 16)
-		for j := 0; j < 16; j++ {
-			mulTable[i][j] = gf16Mul(byte(i), byte(j))
-
-			if mulTable[i][j] == 1 {
-				invTable[i] = byte(j)
-			}
-		}
-	}
-	return mulTable, invTable
-}
-
 func vectorToMatrix(x []byte) [][]byte {
 	result := make([][]byte, len(x))
 

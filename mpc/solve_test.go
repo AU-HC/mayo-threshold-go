@@ -70,3 +70,23 @@ func TestRightInverseOfMatrixForNonSquareMatrix(t *testing.T) {
 		return
 	}
 }
+
+func TestKernel(t *testing.T) {
+	matrix := [][]byte{
+		{1, 2, 3},
+		{2, 4, 6},
+	}
+
+	// Expected kernel basis (rows as basis vectors)
+	expectedKernelBasis := [][]byte{
+		{0, 1, 15},
+	}
+
+	// Compute actual kernel basis
+	actualKernelBasis := Kernel(matrix)
+
+	// Compare expected vs actual
+	if !reflect.DeepEqual(actualKernelBasis, expectedKernelBasis) {
+		t.Errorf("Kernel basis mismatch. Expected %v but got %v", expectedKernelBasis, actualKernelBasis)
+	}
+}

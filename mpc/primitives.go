@@ -72,6 +72,17 @@ func generateZeroMatrix(rows, columns int) [][]byte {
 	return matrix
 }
 
+func generateIdentityMatrix(dimension int) [][]byte {
+	matrix := make([][]byte, dimension)
+
+	for i := 0; i < dimension; i++ {
+		matrix[i] = make([]byte, dimension)
+		matrix[i][i] = 1
+	}
+
+	return matrix
+}
+
 func AddMatrices(a, b [][]byte) {
 	if len(a) != len(b) || len(a[0]) != len(b[0]) {
 		panic(fmt.Errorf("a and b do not have the same dimensions "))
@@ -133,26 +144,6 @@ func MultiplyMatrixWithConstant(A [][]byte, c byte) [][]byte {
 	}
 
 	return B
-}
-
-func gf16Mul(a, b byte) byte {
-	var r byte
-
-	// Multiply each coefficient with y
-	r = (a & 0x1) * b
-	r ^= (a & 0x2) * b
-	r ^= (a & 0x4) * b
-	r ^= (a & 0x8) * b
-
-	overFlowBits := r & 0xF0
-
-	// Reduce with respect to x^4 + x + 1
-	reducedOverFlowBits := overFlowBits>>4 ^ overFlowBits>>3
-
-	// Subtract and remove overflow bits
-	r = (r ^ reducedOverFlowBits) & 0x0F
-
-	return r
 }
 
 func multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares, eShares [][][]byte, dRow, dCol, eRow, eCol int) [][][]byte {

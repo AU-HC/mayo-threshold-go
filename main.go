@@ -12,7 +12,7 @@ const n = 1
 const lambda = 2
 
 func main() {
-	rand.Seed(100)
+	rand.Seed(99)
 
 	// Get mock esk, epk and define message
 	//message := []byte("Hello, world!")
@@ -50,6 +50,9 @@ func main() {
 	signature := mpc.ComputeSPrime(parties)
 	encodedSignature := signature.Encode()
 	fmt.Println(hex.EncodeToString(encodedSignature))
+
+	//xd := "0351b3bdd3777207e089b260fc048987ab1b5ff4bb8b93b5c5029d32ad38a8f2494cbe2433c665d3d140199a91903dd9fec45616eaf06553328a26ac4572d9c4511f0036c0cf8356e612bdfbc29a90cea11a62390b17260d0c902a12702de25855913c0e9fa3e819e7162bd799b85326c4aec547e31aedbc064116396b61c73a32ad499a097d806fe2ccaf634fd93be5df400096dc8d8412bcccd01ae90887bb63e34a57137052dfef6649b2a59d6a8b137fd941a62f062e002b48656c6c6f2c20776f726c6421"
+	//parties[0].LittleS
 
 	valid := mpc.Verify(parties, signature)
 

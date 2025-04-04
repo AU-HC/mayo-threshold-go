@@ -54,8 +54,8 @@ func ComputeM(parties []*model.Party, message []byte) {
 
 		// Open d, e and compute locally
 		zShares := multiplicationProtocol(parties, triples[i], dShares, eShares, k, v, v, o)
-		for j, party := range parties {
-			party.M[i] = zShares[j]
+		for partyNumber, party := range parties {
+			party.M[i] = zShares[partyNumber]
 		}
 
 		MReconstructed := generateZeroMatrix(k, o)
@@ -106,7 +106,7 @@ func ComputeY(parties []*model.Party) {
 
 func LocalComputeA(parties []*model.Party) {
 	for _, party := range parties {
-		A := generateZeroMatrix(m+shifts, k*o+shifts)
+		A := generateZeroMatrix(m+shifts, k*o)
 		ell := 0
 		MHat := make([][][]byte, k)
 		for index := 0; index < k; index++ {
@@ -121,18 +121,33 @@ func LocalComputeA(parties []*model.Party) {
 
 		for t := 0; t < k; t++ {
 			for j := t; j < k; j++ {
-				elmjhat := MultiplyMatrixWithConstant(MHat[j], byte(ell))
-				for i := 0; i < m; i++ {
-					for y := t * o; y < (t+1)*o; y++ {
-						A[i][y] ^= elmjhat[i][y-t*o]
-					}
-				}
-
-				if t != j {
-					elmthat := MultiplyMatrixWithConstant(MHat[t], byte(ell))
+				/*
+					elmjhat := MultiplyMatrixWithConstant(MHat[j], byte(ell))
 					for i := 0; i < m; i++ {
-						for y := j * o; y < (j+1)*o; y++ {
-							A[i][y] ^= elmthat[i][y-j*o]
+						for y := t * o; y < (t+1)*o; y++ {
+							A[i][y] ^= elmjhat[i][y-t*o]
+						}
+					}
+
+					if t != j {
+						elmthat := MultiplyMatrixWithConstant(MHat[t], byte(ell))
+						for i := 0; i < m; i++ {
+							for y := j * o; y < (j+1)*o; y++ {
+								A[i][y] ^= elmthat[i][y-j*o]
+							}
+						}
+					}
+
+				*/
+
+				for row := 0; row < m; row++ {
+					for column := t * o; column < (t+1)*o; column++ {
+						A[row+ell][column] ^= MHat[j][row][column%o]
+					}
+
+					if t != j {
+						for column := j * o; column < (j+1)*o; column++ {
+							A[row+ell][column] ^= MHat[t][row][column%o]
 						}
 					}
 				}
@@ -141,6 +156,7 @@ func LocalComputeA(parties []*model.Party) {
 			}
 		}
 
+		A = reduceAModF(A)
 		party.A = A
 	}
 }
@@ -212,7 +228,6 @@ func reduceAModF(A [][]byte) [][]byte {
 		}
 	}
 	A = A[:m]
-
 	return A
 }
 
@@ -236,6 +251,25 @@ func ComputeSPrime(parties []*model.Party) model.Signature {
 	// Open d, e and compute locally
 	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares, k, o, o, v)
 
+	// CORRECTNESS CHECK
+	xTimesOTransposedReconstructed := generateZeroMatrix(k, v)
+	XReconstructed := generateZeroMatrix(k, o)
+	OReconstructed := generateZeroMatrix(v, o)
+	VReconstructed := generateZeroMatrix(k, v)
+	for i, party := range parties {
+		AddMatrices(xTimesOTransposedReconstructed, xTimesOTransposedShares[i])
+		AddMatrices(XReconstructed, party.X)
+		AddMatrices(OReconstructed, party.EskShare.O)
+		AddMatrices(VReconstructed, party.V)
+	}
+	if !reflect.DeepEqual(xTimesOTransposedReconstructed, MultiplyMatrices(XReconstructed, MatrixTranspose(OReconstructed))) {
+		panic("XO^T != X * O^T")
+	}
+	if !reflect.DeepEqual(xTimesOTransposedReconstructed, MatrixTranspose(MultiplyMatrices(OReconstructed, MatrixTranspose(XReconstructed)))) {
+		panic("XO^T != (OX^T)^T")
+	}
+	// CORRECTNESS CHECK
+
 	// [S'] = [V + (OX^T)^T)]
 	for i, party := range parties {
 		party.SPrimeShares = AddMatricesNew(party.V, xTimesOTransposedShares[i])
@@ -256,6 +290,15 @@ func ComputeSPrime(parties []*model.Party) model.Signature {
 	for _, party := range parties {
 		party.LittleS = appendMatrixHorizontal(SPrime, xOpen)
 	}
+
+	// CORRECTNESS CHECK
+	if !reflect.DeepEqual(SPrime, AddMatricesNew(VReconstructed, xTimesOTransposedReconstructed)) {
+		panic("S' != V + XO^T")
+	}
+	if (len(s) * len(s[0])) != (k * n) {
+		panic("signature invalid size")
+	}
+	// CORRECTNESS CHECK
 
 	return model.Signature{
 		S:    s,

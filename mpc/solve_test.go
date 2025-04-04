@@ -90,3 +90,29 @@ func TestKernel(t *testing.T) {
 		t.Errorf("Kernel basis mismatch. Expected %v but got %v", expectedKernelBasis, actualKernelBasis)
 	}
 }
+
+func TestAppendMatrixHorizontal(t *testing.T) {
+	A := [][]byte{
+		{1, 2},
+		{3, 4},
+	}
+
+	B := [][]byte{
+		{5, 6},
+		{7, 8},
+	}
+
+	// Expected result after horizontal append
+	expected := [][]byte{
+		{1, 2, 5, 6},
+		{3, 4, 7, 8},
+	}
+
+	// Compute actual result
+	actual := appendMatrixHorizontal(A, B)
+
+	// Compare expected vs actual
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Matrix append mismatch. Expected %v but got %v", expected, actual)
+	}
+}

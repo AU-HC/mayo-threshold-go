@@ -12,11 +12,16 @@ const n = 81
 const o = 17
 const v = n - o
 
-const lambda = 2
+const lambda = 0
+
+const shifts = k * (k + 1) / 2
 
 func ComputeM(parties []*model.Party, message []byte) {
 	salt := Coin(parties, lambda)
 	t := rand.Shake256(m, message, salt)
+	for index, elem := range t {
+		t[index] = elem & 0xf
+	}
 	triples := GenerateMultiplicationTriples(len(parties), k, v, v, o, m) // V: k x v, Li: v x o
 
 	VReconstructed := generateZeroMatrix(k, v)
@@ -101,7 +106,7 @@ func ComputeY(parties []*model.Party) {
 
 func LocalComputeA(parties []*model.Party) {
 	for _, party := range parties {
-		A := generateZeroMatrix(m, k*o)
+		A := generateZeroMatrix(m+shifts, k*o+shifts)
 		ell := 0
 		MHat := make([][][]byte, k)
 		for index := 0; index < k; index++ {
@@ -141,8 +146,8 @@ func LocalComputeA(parties []*model.Party) {
 }
 
 func LocalComputeY(parties []*model.Party) {
-	for _, party := range parties {
-		y := make([]byte, m)
+	for partyNumber, party := range parties {
+		y := make([]byte, m+shifts)
 		ell := 0
 
 		for j := 0; j < k; j++ {
@@ -158,20 +163,57 @@ func LocalComputeY(parties []*model.Party) {
 					}
 				}
 
-				for i := 0; i < len(y); i++ {
-					y[i] ^= gf16Mul(byte(ell), u[i])
+				//for i := 0; i < len(y); i++ {
+				//	y[i] ^= gf16Mul(byte(ell), u[i])
+				//}
+
+				for d := 0; d < m; d++ {
+					y[d+ell] ^= u[d]
 				}
 
 				ell++
 			}
 		}
 
-		t := party.LittleT
-		for i := 0; i < m; i++ {
-			y[i] ^= t[i]
+		y = reduceVecModF(y)
+		if partyNumber == 0 {
+			t := party.LittleT
+			for i := 0; i < m; i++ {
+				y[i] ^= t[i]
+			}
 		}
 		party.LittleY = y
 	}
+}
+
+func reduceVecModF(y []byte) []byte {
+	tailF := []byte{8, 0, 2, 8}
+
+	for i := m + shifts - 1; i >= m; i-- {
+		for shift, coefficient := range tailF {
+			y[i-m+shift] ^= gf16Mul(y[i], coefficient)
+		}
+		y[i] = 0
+	}
+	y = y[:m]
+
+	return y
+}
+
+func reduceAModF(A [][]byte) [][]byte {
+	tailF := []byte{8, 0, 2, 8}
+
+	for row := m + shifts - 1; row >= m; row-- {
+		for column := 0; column < k*o; column++ {
+			for shift, coefficient := range tailF {
+				A[row-m+shift][column] ^= gf16Mul(A[row][column], coefficient)
+			}
+			A[row][column] = 0
+		}
+	}
+	A = A[:m]
+
+	return A
 }
 
 func ComputeSPrime(parties []*model.Party) model.Signature {
@@ -210,6 +252,10 @@ func ComputeSPrime(parties []*model.Party) model.Signature {
 	}
 
 	s := appendMatrixHorizontal(SPrime, xOpen)
+
+	for _, party := range parties {
+		party.LittleS = appendMatrixHorizontal(SPrime, xOpen)
+	}
 
 	return model.Signature{
 		S:    s,

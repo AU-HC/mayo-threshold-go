@@ -1,13 +1,15 @@
 package rand
 
-import "C"
 import (
-	"crypto/rand"
 	"crypto/sha3"
+	"math/rand"
 )
 
 func SampleFieldElement() byte {
-	buf := make([]byte, 1)
+	randomInt := rand.Int()
+	return byte(randomInt) & 0xf
+
+	/*buf := make([]byte, 1)
 
 	_, err := rand.Read(buf)
 	if err != nil {
@@ -15,6 +17,8 @@ func SampleFieldElement() byte {
 	}
 
 	return buf[0] & 0xf
+
+	*/
 }
 
 func Shake256(outputLength int, inputs ...[]byte) []byte {

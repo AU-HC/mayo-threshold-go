@@ -3,14 +3,17 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"mayo-threshold-go/mock"
 	"mayo-threshold-go/mpc"
 )
 
-const n = 2
+const n = 1
 const lambda = 2
 
 func main() {
+	rand.Seed(100)
+
 	// Get mock esk, epk and define message
 	//message := []byte("Hello, world!")
 	esk, epk := mock.GetExpandedKeyPair()
@@ -45,6 +48,13 @@ func main() {
 
 	// Step 7-9 of sign
 	signature := mpc.ComputeSPrime(parties)
+	encodedSignature := signature.Encode()
+	fmt.Println(hex.EncodeToString(encodedSignature))
 
-	fmt.Println(hex.EncodeToString(signature.Encode()))
+	valid := mpc.Verify(parties, signature)
+
+	fmt.Println(parties[0].Salt)
+	fmt.Println(parties[0].LittleT)
+	fmt.Println(parties[0].LittleY)
+	fmt.Println("Signature was valid:", valid)
 }

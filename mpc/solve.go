@@ -3,6 +3,7 @@ package mpc
 import (
 	"fmt"
 	"mayo-threshold-go/model"
+	"reflect"
 	"slices"
 )
 
@@ -230,8 +231,6 @@ func ComputeLittleX(parties []*model.Party) {
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		party.S = RandMatrix(t, t)
-
 		ai := triplesStep7.A[partyNumber]
 		bi := triplesStep7.B[partyNumber]
 		di := AddMatricesNew(party.AInverse, ai)
@@ -240,14 +239,12 @@ func ComputeLittleX(parties []*model.Party) {
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	ATimesB := multiplicationProtocol(parties, triplesStep7, dShares, eShares, t, s, s, 1)
+	AInvTimesB := multiplicationProtocol(parties, triplesStep7, dShares, eShares, t, s, s, 1)
 
 	// Compute [S] * [z]
 	dShares = make([][][]byte, len(parties))
 	eShares = make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		party.R = RandMatrix(s, s)
-
 		ai := triplesStep8.A[partyNumber]
 		bi := triplesStep8.B[partyNumber]
 		di := AddMatricesNew(party.S, ai)
@@ -259,13 +256,34 @@ func ComputeLittleX(parties []*model.Party) {
 	STimesZ := multiplicationProtocol(parties, triplesStep8, dShares, eShares, t, t, t, 1)
 
 	// [x] = [A^-1] * [b] + [S] * [z]
-	for i, _ := range parties {
-		AddMatrices(ATimesB[i], STimesZ[i])
+	for i, party := range parties {
+		party.LittleX = matrixToVec(AddMatricesNew(AInvTimesB[i], STimesZ[i]))
 	}
 
-	for i, party := range parties {
-		party.LittleX = matrixToVec(ATimesB[i])
+	p := parties[0]
+	ATimesX := MultiplyMatrices(parties[0].A, vectorToMatrix(parties[0].LittleX))
+	//xd1 := MultiplyMatrices(p.A, AddMatricesNew(MultiplyMatrices(p.AInverse, vectorToMatrix(p.LittleY)), MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
+	//xd2 := AddMatricesNew(MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(RightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))), MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
+	//xd3 := MultiplyMatrices(RightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(RightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))))), MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))))
+	//xd4 := MultiplyMatrices(RightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.T, MultiplyMatrices(RightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))), MultiplyMatrices(p.T, vectorToMatrix(p.Z))))
+	//xd5 := MultiplyMatrices(RightInverse(p.R), MultiplyMatrices(Identity(s), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))
+	xd6 := vectorToMatrix(p.LittleY)
+
+	if !reflect.DeepEqual(ATimesX, xd6) {
+		fmt.Println("error")
 	}
+}
+
+func Identity(size int) [][]byte {
+	result := make([][]byte, size)
+
+	for i := 0; i < size; i++ {
+		row := make([]byte, size)
+		row[i] = 1
+		result[i] = row
+	}
+
+	return result
 }
 
 // matrixToVec takes a column vector (as a matrix) and returns a row vector

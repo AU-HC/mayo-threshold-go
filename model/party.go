@@ -19,4 +19,5 @@ type Party struct {
 	LittleX           []byte
 	LittleY           []byte
 	Z                 []byte
+	LittleS           [][]byte
 }

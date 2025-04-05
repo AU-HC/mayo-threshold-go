@@ -5,6 +5,9 @@ type Party struct {
 	Epk               ExpandedPublicKey
 	Salt              []byte
 	LittleT           []byte
+	LittleX           []byte
+	LittleY           []byte
+	Z                 []byte
 	T                 [][]byte
 	V, VReconstructed [][]byte
 	M                 [][][]byte
@@ -15,8 +18,5 @@ type Party struct {
 	S                 [][]byte
 	SPrime            [][]byte
 	X                 [][]byte
-	LittleX           []byte
-	LittleY           []byte
-	Z                 []byte
 	Signature         [][]byte
 }

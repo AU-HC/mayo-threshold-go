@@ -129,8 +129,8 @@ func ComputeAInverse(parties []*model.Party) {
 
 	// Open d, e and compute locally
 	zShares := multiplicationProtocol(parties, triple, dShares, eShares, t, s, s, s)
-	for i, party := range parties {
-		party.AInverse = zShares[i]
+	for partyNumber, party := range parties {
+		party.AInverse = zShares[partyNumber]
 	}
 }
 

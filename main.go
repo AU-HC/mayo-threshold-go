@@ -8,7 +8,7 @@ import (
 	"mayo-threshold-go/mpc"
 )
 
-const n = 2
+const n = 1
 const lambda = 2
 
 const m = 64
@@ -65,7 +65,10 @@ func main() {
 		sVector[i] = make([]byte, N)
 		copy(sVector[i], s[i*N:(i+1)*N])
 	}
-	//parties[0].Signature = sVector
+
+	//for _, party := range parties {
+	//	party.Signature = sVector
+	//}
 
 	valid := mpc.Verify(parties, signature)
 

@@ -25,7 +25,7 @@ func main() {
 	// Threshold sign message
 	before := time.Now()
 	sig := mpc.Sign(message, parties)
-	fmt.Println(fmt.Sprintf("Signing with %d parties, took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
+	fmt.Println(fmt.Sprintf("Signing with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Verify message
 	before = time.Now()

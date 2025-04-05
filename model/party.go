@@ -10,8 +10,6 @@ type Party struct {
 	Z                 []byte
 	T                 [][]byte
 	V, VReconstructed [][]byte
-	M                 [][][]byte
-	Y                 [][][]byte
 	A                 [][]byte
 	AInverse          [][]byte
 	R                 [][]byte
@@ -19,4 +17,6 @@ type Party struct {
 	SPrime            [][]byte
 	X                 [][]byte
 	Signature         [][]byte
+	M                 [][][]byte
+	Y                 [][][]byte
 }

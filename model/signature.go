@@ -5,7 +5,7 @@ type Signature struct {
 	Salt []byte
 }
 
-func (sig *Signature) Encode() []byte {
+func (sig *Signature) Bytes() []byte {
 	encodedSig := make([]byte, 0)
 
 	for _, row := range sig.S {

@@ -22,10 +22,15 @@ func main() {
 	parties := mock.CreatePartiesAndSharesForEsk(esk, epk, AmountOfParties)
 
 	// Sign message
-	signature := mpc.Sign(message, parties)
-	fmt.Println(hex.EncodeToString(signature.Encode()))
+	sig := mpc.Sign(message, parties)
 
-	// Verify message TODO: make this print prettier
-	valid := mpc.Verify(epk, message, signature)
-	fmt.Println("Signature was valid:", valid)
+	// Verify message
+	valid := mpc.Verify(epk, message, sig)
+	if valid {
+		fmt.Println(fmt.Sprintf("Signature: '%s' is a valid signature on the message: '%s'",
+			hex.EncodeToString(sig.Bytes()), message))
+	} else {
+		fmt.Println(fmt.Sprintf("Signature: '%s' is not a valid signature on the message: '%s'",
+			hex.EncodeToString(sig.Bytes()), message))
+	}
 }

@@ -260,6 +260,7 @@ func ComputeLittleX(parties []*model.Party) {
 		party.LittleX = matrixToVec(AddMatricesNew(AInvTimesB[i], STimesZ[i]))
 	}
 
+	// CHECK FOR CORRECTNESS
 	AReconstructed := generateZeroMatrix(s, t)
 	XReconstructed := generateZeroMatrix(t, 1)
 	YReconstructed := generateZeroMatrix(s, 1)
@@ -268,6 +269,7 @@ func ComputeLittleX(parties []*model.Party) {
 		AddMatrices(XReconstructed, vectorToMatrix(party.LittleX))
 		AddMatrices(YReconstructed, vectorToMatrix(party.LittleY))
 	}
+	// CHECK FOR CORRECTNESS
 
 	//p := parties[0]
 	ATimesX := MultiplyMatrices(AReconstructed, XReconstructed)
@@ -280,18 +282,6 @@ func ComputeLittleX(parties []*model.Party) {
 	if !reflect.DeepEqual(ATimesX, xd6) {
 		panic("solve did not find a correct solution")
 	}
-}
-
-func Identity(size int) [][]byte {
-	result := make([][]byte, size)
-
-	for i := 0; i < size; i++ {
-		row := make([]byte, size)
-		row[i] = 1
-		result[i] = row
-	}
-
-	return result
 }
 
 // matrixToVec takes a column vector (as a matrix) and returns a row vector

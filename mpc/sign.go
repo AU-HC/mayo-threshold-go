@@ -58,6 +58,7 @@ func ComputeM(parties []*model.Party, message []byte) {
 			party.M[i] = zShares[partyNumber]
 		}
 
+		// CHECK FOR CORRECTNESS
 		MReconstructed := generateZeroMatrix(k, o)
 		LReconstructed := generateZeroMatrix(v, o)
 		for _, party := range parties {
@@ -67,6 +68,7 @@ func ComputeM(parties []*model.Party, message []byte) {
 		if !reflect.DeepEqual(MReconstructed, MultiplyMatrices(VReconstructed, LReconstructed)) {
 			panic("M is not equal to V * L")
 		}
+		// CHECK FOR CORRECTNESS
 	}
 }
 
@@ -93,6 +95,7 @@ func ComputeY(parties []*model.Party) {
 			party.Y[i] = zShares[partyNumber]
 		}
 
+		// CHECK FOR CORRECTNESS
 		YReconstructed := generateZeroMatrix(k, k)
 		for _, party := range parties {
 			AddMatrices(YReconstructed, party.Y[i])
@@ -101,6 +104,7 @@ func ComputeY(parties []*model.Party) {
 			parties[0].Epk.P1[i]), MatrixTranspose(parties[0].VReconstructed))) {
 			panic("Y is not equal to V * P1 * V^T")
 		}
+		// CHECK FOR CORRECTNESS
 	}
 }
 
@@ -160,10 +164,6 @@ func LocalComputeY(parties []*model.Party) {
 					}
 				}
 
-				//for i := 0; i < len(y); i++ {
-				//	y[i] ^= gf16Mul(byte(ell), u[i])
-				//}
-
 				for d := 0; d < m; d++ {
 					y[d+ell] ^= u[d]
 				}
@@ -192,8 +192,8 @@ func reduceVecModF(y []byte) []byte {
 		}
 		y[i] = 0
 	}
-	y = y[:m]
 
+	y = y[:m]
 	return y
 }
 
@@ -232,7 +232,7 @@ func ComputeSPrime(parties []*model.Party) model.Signature {
 	// Open d, e and compute locally
 	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares, k, o, o, v)
 
-	// CORRECTNESS CHECK
+	// CHECK FOR CORRECTNESS
 	xTimesOTransposedReconstructed := generateZeroMatrix(k, v)
 	XReconstructed := generateZeroMatrix(k, o)
 	OReconstructed := generateZeroMatrix(v, o)
@@ -249,7 +249,7 @@ func ComputeSPrime(parties []*model.Party) model.Signature {
 	if !reflect.DeepEqual(xTimesOTransposedReconstructed, MatrixTranspose(MultiplyMatrices(OReconstructed, MatrixTranspose(XReconstructed)))) {
 		panic("XO^T != (OX^T)^T")
 	}
-	// CORRECTNESS CHECK
+	// CHECK FOR CORRECTNESS
 
 	// [S'] = [V + (OX^T)^T)]
 	for i, party := range parties {
@@ -269,14 +269,14 @@ func ComputeSPrime(parties []*model.Party) model.Signature {
 		party.Signature = appendMatrixHorizontal(party.SPrime, party.X)
 	}
 
-	// CORRECTNESS CHECK
+	// CHECK FOR CORRECTNESS
 	if !reflect.DeepEqual(SPrimeReconstructed, AddMatricesNew(VReconstructed, xTimesOTransposedReconstructed)) {
 		panic("S' != V + XO^T")
 	}
 	if (len(s) * len(s[0])) != (k * n) {
 		panic("signature invalid size")
 	}
-	// CORRECTNESS CHECK
+	// CHECK FOR CORRECTNESS
 
 	return model.Signature{
 		S:    s,

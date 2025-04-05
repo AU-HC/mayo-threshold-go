@@ -36,7 +36,7 @@ func TestRightInverseOfMatrixForSquareMatrix(t *testing.T) {
 		{4, 5, 6},
 		{7, 8, 7},
 	}
-	rightInverse := RightInverse(matrix)
+	rightInverse := computeRightInverse(matrix)
 
 	identity := make([][]byte, len(matrix))
 	for i := range identity {
@@ -56,7 +56,7 @@ func TestRightInverseOfMatrixForNonSquareMatrix(t *testing.T) {
 		{1, 2, 3, 4},
 		{5, 6, 7, 8},
 	}
-	rightInverse := RightInverse(matrix)
+	rightInverse := computeRightInverse(matrix)
 
 	identity := make([][]byte, len(matrix))
 	for i := range identity {
@@ -83,11 +83,11 @@ func TestKernel(t *testing.T) {
 	}
 
 	// Compute actual kernel basis
-	actualKernelBasis := Kernel(matrix)
+	actualKernelBasis := computeBasisOfKernel(matrix)
 
 	// Compare expected vs actual
 	if !reflect.DeepEqual(actualKernelBasis, expectedKernelBasis) {
-		t.Errorf("Kernel basis mismatch. Expected %v but got %v", expectedKernelBasis, actualKernelBasis)
+		t.Errorf("computeBasisOfKernel basis mismatch. Expected %v but got %v", expectedKernelBasis, actualKernelBasis)
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"mayo-threshold-go/model"
 )
 
-func Verify(parties []*model.Party, signature model.Signature) bool {
+func ThresholdVerify(parties []*model.Party, signature model.Signature) bool {
 	P := make([][][][]byte, len(parties))
 
 	for partyNumber, party := range parties {
@@ -36,7 +36,7 @@ func Verify(parties []*model.Party, signature model.Signature) bool {
 		}
 	}
 
-	LocalComputeY(parties)
+	localComputeY(parties)
 
 	y := make([]byte, m)
 	for _, party := range parties {

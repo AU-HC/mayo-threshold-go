@@ -120,7 +120,7 @@ func LocalComputeA(parties []*model.Party) {
 		}
 
 		for t := 0; t < k; t++ {
-			for j := t; j < k; j++ {
+			for j := k - 1; j >= t; j-- {
 				for row := 0; row < m; row++ {
 					for column := t * o; column < (t+1)*o; column++ {
 						A[row+ell][column] ^= MHat[j][row][column%o]
@@ -266,7 +266,7 @@ func ComputeSPrime(parties []*model.Party) model.Signature {
 
 	s := appendMatrixHorizontal(SPrimeReconstructed, xReconstructed)
 	for _, party := range parties {
-		party.Signature = appendMatrixHorizontal(SPrimeReconstructed, xReconstructed)
+		party.Signature = appendMatrixHorizontal(party.SPrime, party.X)
 	}
 
 	// CORRECTNESS CHECK

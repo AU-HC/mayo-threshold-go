@@ -8,7 +8,7 @@ import (
 	"mayo-threshold-go/mpc"
 )
 
-const n = 1
+const n = 2
 const lambda = 2
 
 const m = 64

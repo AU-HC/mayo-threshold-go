@@ -34,8 +34,8 @@ func main() {
 		// Step 4 of sign
 		mpc.ComputeY(parties)
 		// Step 5 of sign
-		mpc.LocalComputeA(parties) // TODO: test
-		mpc.LocalComputeY(parties) // TODO: test
+		mpc.LocalComputeA(parties)
+		mpc.LocalComputeY(parties)
 
 		// Step 6 of sign
 		// ** Algorithm solve **
@@ -49,7 +49,7 @@ func main() {
 	// Step 5 of solve
 	mpc.ComputeAInverse(parties)
 	// Steps 6-9 of solve
-	mpc.ComputeLittleX(parties) // TODO: figure out if the spec is correct / test
+	mpc.ComputeLittleX(parties)
 	// ** Algorithm solve **
 
 	// Step 7-9 of sign

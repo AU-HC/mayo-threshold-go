@@ -8,7 +8,7 @@ import (
 	"mayo-threshold-go/mpc"
 )
 
-const AmountOfParties = 2
+const AmountOfParties = 10
 
 func main() {
 	// Set seed for easier testing
@@ -26,6 +26,6 @@ func main() {
 	fmt.Println(hex.EncodeToString(signature.Encode()))
 
 	// Verify message TODO: make this print prettier
-	valid := mpc.ThresholdVerify(parties, signature)
+	valid := mpc.Verify(epk, message, signature)
 	fmt.Println("Signature was valid:", valid)
 }

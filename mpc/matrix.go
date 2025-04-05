@@ -357,3 +357,11 @@ func computeRightInverse(t [][]byte) [][]byte {
 
 	return B
 }
+
+func MultiplyVecConstant(b byte, a []byte) []byte {
+	C := make([]byte, len(a))
+	for i := range C {
+		C[i] = gf16Mul(b, a[i])
+	}
+	return C
+}

@@ -3,6 +3,7 @@ package mpc
 import (
 	"bytes"
 	"mayo-threshold-go/model"
+	"mayo-threshold-go/rand"
 )
 
 func ThresholdVerify(parties []*model.Party, signature model.Signature) bool {
@@ -36,6 +37,30 @@ func ThresholdVerify(parties []*model.Party, signature model.Signature) bool {
 		}
 	}
 
+	localComputeY(parties)
+
+	y := make([]byte, m)
+	for _, party := range parties {
+		y = AddVec(y, party.LittleY)
+	}
+	zero := make([]byte, m)
+
+	return bytes.Equal(y, zero)
+}
+
+func Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signature) bool {
+	P := calculateP(epk.P1, epk.P2, epk.P3)
+	Y := make([][][]byte, m)
+	t := rand.Shake256(m, message, signature.Salt)
+	parties := make([]*model.Party, 1)
+
+	for i := 0; i < m; i++ {
+		STimesP := MultiplyMatrices(signature.S, P[i])
+		Y[i] = MultiplyMatrices(STimesP, MatrixTranspose(signature.S))
+	}
+
+	// Create party, due to how code is structured
+	parties[0] = &model.Party{Y: Y, LittleT: t}
 	localComputeY(parties)
 
 	y := make([]byte, m)

@@ -171,11 +171,3 @@ func computeLittleX(parties []*model.Party) {
 		panic("solve did not find a correct solution")
 	}
 }
-
-func MultiplyVecConstant(b byte, a []byte) []byte {
-	C := make([]byte, len(a))
-	for i := range C {
-		C[i] = gf16Mul(b, a[i])
-	}
-	return C
-}

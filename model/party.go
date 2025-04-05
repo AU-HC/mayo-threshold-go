@@ -13,11 +13,10 @@ type Party struct {
 	AInverse          [][]byte
 	R                 [][]byte
 	S                 [][]byte
-	SPrimeShares      [][]byte
 	SPrime            [][]byte
 	X                 [][]byte
 	LittleX           []byte
 	LittleY           []byte
 	Z                 []byte
-	LittleS           [][]byte
+	Signature         [][]byte
 }

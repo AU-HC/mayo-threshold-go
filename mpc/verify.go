@@ -18,12 +18,12 @@ func Verify(parties []*model.Party, signature model.Signature) bool {
 		eShares := make([][][]byte, len(parties))
 
 		for partyNumber, party := range parties {
-			STimesP := MultiplyMatrices(party.LittleS, P[partyNumber][i])
+			STimesP := MultiplyMatrices(party.Signature, P[partyNumber][i])
 
 			ai := triple.A[partyNumber]
 			bi := triple.B[partyNumber]
 			di := AddMatricesNew(STimesP, ai)
-			ei := AddMatricesNew(MatrixTranspose(party.LittleS), bi)
+			ei := AddMatricesNew(MatrixTranspose(party.Signature), bi)
 
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
@@ -42,8 +42,9 @@ func Verify(parties []*model.Party, signature model.Signature) bool {
 	for _, party := range parties {
 		y = AddVec(y, party.LittleY)
 	}
+	zero := make([]byte, m)
 
-	return bytes.Equal(y, parties[0].LittleT)
+	return bytes.Equal(y, zero)
 }
 
 func calculateP(P1, P2, P3 [][][]byte) [][][]byte {

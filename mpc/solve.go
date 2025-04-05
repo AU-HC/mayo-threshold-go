@@ -260,17 +260,25 @@ func ComputeLittleX(parties []*model.Party) {
 		party.LittleX = matrixToVec(AddMatricesNew(AInvTimesB[i], STimesZ[i]))
 	}
 
-	p := parties[0]
-	ATimesX := MultiplyMatrices(parties[0].A, vectorToMatrix(parties[0].LittleX))
+	AReconstructed := generateZeroMatrix(s, t)
+	XReconstructed := generateZeroMatrix(t, 1)
+	YReconstructed := generateZeroMatrix(s, 1)
+	for _, party := range parties {
+		AddMatrices(AReconstructed, party.A)
+		AddMatrices(XReconstructed, vectorToMatrix(party.LittleX))
+		AddMatrices(YReconstructed, vectorToMatrix(party.LittleY))
+	}
+
+	//p := parties[0]
+	ATimesX := MultiplyMatrices(AReconstructed, XReconstructed)
 	//xd1 := MultiplyMatrices(p.A, AddMatricesNew(MultiplyMatrices(p.AInverse, vectorToMatrix(p.LittleY)), MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
 	//xd2 := AddMatricesNew(MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(RightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))), MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
 	//xd3 := MultiplyMatrices(RightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(RightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))))), MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))))
 	//xd4 := MultiplyMatrices(RightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.T, MultiplyMatrices(RightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))), MultiplyMatrices(p.T, vectorToMatrix(p.Z))))
 	//xd5 := MultiplyMatrices(RightInverse(p.R), MultiplyMatrices(Identity(s), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))
-	xd6 := vectorToMatrix(p.LittleY)
-
+	xd6 := YReconstructed
 	if !reflect.DeepEqual(ATimesX, xd6) {
-		fmt.Println("error")
+		panic("solve did not find a correct solution")
 	}
 }
 

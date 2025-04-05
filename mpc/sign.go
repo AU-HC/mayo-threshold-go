@@ -89,8 +89,8 @@ func ComputeY(parties []*model.Party) {
 
 		// Open d, e and compute locally
 		zShares := multiplicationProtocol(parties, triples[i], dShares, eShares, k, v, v, k)
-		for j, party := range parties {
-			party.Y[i] = zShares[j]
+		for partyNumber, party := range parties {
+			party.Y[i] = zShares[partyNumber]
 		}
 
 		YReconstructed := generateZeroMatrix(k, k)
@@ -121,25 +121,6 @@ func LocalComputeA(parties []*model.Party) {
 
 		for t := 0; t < k; t++ {
 			for j := t; j < k; j++ {
-				/*
-					elmjhat := MultiplyMatrixWithConstant(MHat[j], byte(ell))
-					for i := 0; i < m; i++ {
-						for y := t * o; y < (t+1)*o; y++ {
-							A[i][y] ^= elmjhat[i][y-t*o]
-						}
-					}
-
-					if t != j {
-						elmthat := MultiplyMatrixWithConstant(MHat[t], byte(ell))
-						for i := 0; i < m; i++ {
-							for y := j * o; y < (j+1)*o; y++ {
-								A[i][y] ^= elmthat[i][y-j*o]
-							}
-						}
-					}
-
-				*/
-
 				for row := 0; row < m; row++ {
 					for column := t * o; column < (t+1)*o; column++ {
 						A[row+ell][column] ^= MHat[j][row][column%o]
@@ -272,27 +253,24 @@ func ComputeSPrime(parties []*model.Party) model.Signature {
 
 	// [S'] = [V + (OX^T)^T)]
 	for i, party := range parties {
-		party.SPrimeShares = AddMatricesNew(party.V, xTimesOTransposedShares[i])
+		party.SPrime = AddMatricesNew(party.V, xTimesOTransposedShares[i])
 	}
 
-	// Open S'
-	// Open X
-	// TODO: Figure out if we should open X
-	SPrime := generateZeroMatrix(k, v)
-	xOpen := generateZeroMatrix(k, o)
+	// Open S' and X
+	SPrimeReconstructed := generateZeroMatrix(k, v)
+	xReconstructed := generateZeroMatrix(k, o)
 	for _, party := range parties {
-		AddMatrices(SPrime, party.SPrimeShares)
-		AddMatrices(xOpen, party.X)
+		AddMatrices(SPrimeReconstructed, party.SPrime)
+		AddMatrices(xReconstructed, party.X)
 	}
 
-	s := appendMatrixHorizontal(SPrime, xOpen)
-
+	s := appendMatrixHorizontal(SPrimeReconstructed, xReconstructed)
 	for _, party := range parties {
-		party.LittleS = appendMatrixHorizontal(SPrime, xOpen)
+		party.Signature = appendMatrixHorizontal(SPrimeReconstructed, xReconstructed)
 	}
 
 	// CORRECTNESS CHECK
-	if !reflect.DeepEqual(SPrime, AddMatricesNew(VReconstructed, xTimesOTransposedReconstructed)) {
+	if !reflect.DeepEqual(SPrimeReconstructed, AddMatricesNew(VReconstructed, xTimesOTransposedReconstructed)) {
 		panic("S' != V + XO^T")
 	}
 	if (len(s) * len(s[0])) != (k * n) {

@@ -10,15 +10,15 @@ func SampleFieldElement() byte {
 	randomInt := rand.Int()
 	return byte(randomInt) & 0xf
 
-	/*buf := make([]byte, 1) // TODO: Use crypto/rand when done
+	/*
+		buf := make([]byte, 1) // TODO: Use crypto/rand when done
 
-	_, err := rand.Read(buf)
-	if err != nil {
-		panic(err)
-	}
+		_, err := rand.Read(buf)
+		if err != nil {
+			panic(err)
+		}
 
-	return buf[0] & 0xf
-
+		return buf[0] & 0xf
 	*/
 }
 

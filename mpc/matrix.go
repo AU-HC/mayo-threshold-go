@@ -301,8 +301,6 @@ func echelonForm(B [][]byte) [][]byte {
 }
 
 func computeRightInverse(t [][]byte) [][]byte {
-	_, invTable := generateMulAndInvTable() // TODO: refactor
-
 	M := len(t)    // Rows
 	N := len(t[0]) // Columns
 
@@ -341,7 +339,7 @@ func computeRightInverse(t [][]byte) [][]byte {
 		}
 
 		// Normalize pivot row
-		pivotInv := invTable[augmented[i][i]]
+		pivotInv := field.invTable[augmented[i][i]]
 		for j := 0; j < N+M; j++ {
 			augmented[i][j] = field.Gf16Mul(augmented[i][j], pivotInv)
 		}

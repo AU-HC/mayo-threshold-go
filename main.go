@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"math/rand"
 	"mayo-threshold-go/mpc"
 	"time"
 )
@@ -11,9 +10,6 @@ import (
 const AmountOfParties = 10
 
 func main() {
-	// Set seed for easier testing
-	rand.Seed(98)
-
 	// Define the message
 	message := []byte("Hello, world!")
 

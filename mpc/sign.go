@@ -4,6 +4,8 @@ import (
 	"mayo-threshold-go/model"
 )
 
+// Sign takes a message, parties and outputs an 'opened' signature, which can be verified using
+// original MAYO, or using the Verify method.
 func Sign(message []byte, parties []*model.Party) model.Signature {
 	for true {
 		// Steps 1-3 of sign

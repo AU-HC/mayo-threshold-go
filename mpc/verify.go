@@ -6,6 +6,7 @@ import (
 	"mayo-threshold-go/rand"
 )
 
+// ThresholdVerify takes an 'secret shared' signature and checks if it is valid for the message under the public key
 func ThresholdVerify(parties []*model.Party, signature model.Signature) bool {
 	P := make([][][][]byte, len(parties))
 
@@ -48,6 +49,7 @@ func ThresholdVerify(parties []*model.Party, signature model.Signature) bool {
 	return bytes.Equal(y, zero)
 }
 
+// Verify takes an 'opened' signature and checks if it is valid for the message under the public key
 func Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signature) bool {
 	P := calculateP(epk.P1, epk.P2, epk.P3)
 	Y := make([][][]byte, m)

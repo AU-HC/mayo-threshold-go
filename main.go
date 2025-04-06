@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
-	"mayo-threshold-go/mock"
 	"mayo-threshold-go/mpc"
 	"time"
 )
@@ -13,14 +12,16 @@ const AmountOfParties = 10
 
 func main() {
 	// Set seed for easier testing
-	rand.Seed(99)
+	rand.Seed(98)
 
 	// Get mock esk, epk from json files and define message
 	message := []byte("Hello, world!")
-	esk, epk := mock.GetExpandedKeyPair()
+	//esk, epk := mock.GetExpandedKeyPair()
+
+	epk, parties := mpc.KeyGen(AmountOfParties)
 
 	// Start the parties, by giving them the epk and shares of the esk
-	parties := mock.CreatePartiesAndSharesForEsk(esk, epk, AmountOfParties)
+	//parties := mock.CreatePartiesAndSharesForEsk(esk, epk, AmountOfParties)
 
 	// Threshold sign message
 	before := time.Now()

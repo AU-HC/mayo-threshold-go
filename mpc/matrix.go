@@ -5,6 +5,20 @@ import (
 	"slices"
 )
 
+// upper transposes the lower triangular part of a matrix to the upper triangular part
+func upper(matrix [][]byte) [][]byte {
+	n := len(matrix)
+
+	for i := 0; i < n; i++ {
+		for j := i + 1; j < n; j++ {
+			matrix[i][j] = matrix[i][j] ^ matrix[j][i] // Update upper triangular part
+			matrix[j][i] = 0
+		}
+	}
+
+	return matrix
+}
+
 func rankOfMatrix(t [][]byte) int {
 	if len(t) == 0 || len(t[0]) == 0 {
 		return 0
@@ -120,7 +134,7 @@ func generateIdentityMatrix(dimension int) [][]byte {
 
 func AddMatrices(a, b [][]byte) {
 	if len(a) != len(b) || len(a[0]) != len(b[0]) {
-		panic(fmt.Errorf("a and b do not have the same dimensions "))
+		panic(fmt.Errorf("a and b do not have the same dimensions (%d, %d), (%d, %d)", len(a), len(a[0]), len(b), len(b[0])))
 	}
 
 	for i := range a {

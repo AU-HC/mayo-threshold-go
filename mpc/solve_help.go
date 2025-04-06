@@ -17,7 +17,7 @@ func computeT(parties []*model.Party) bool {
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		party.S = rand.RandMatrix(t, t)
+		party.S = rand.Matrix(t, t)
 
 		ai := triplesStep2.A[partyNumber]
 		bi := triplesStep2.B[partyNumber]
@@ -33,7 +33,7 @@ func computeT(parties []*model.Party) bool {
 	dShares = make([][][]byte, len(parties))
 	eShares = make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		party.R = rand.RandMatrix(s, s)
+		party.R = rand.Matrix(s, s)
 
 		ai := triplesStep3.A[partyNumber]
 		bi := triplesStep3.B[partyNumber]
@@ -103,7 +103,7 @@ func computeLittleX(parties []*model.Party) {
 
 	for _, party := range parties {
 		z := make([]byte, t)
-		zVector := rand.RandVector(t - s)
+		zVector := rand.Vector(t - s)
 
 		for index, elem := range zVector {
 			z = AddVec(z, MultiplyVecConstant(elem, basis[index]))

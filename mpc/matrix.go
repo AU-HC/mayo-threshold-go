@@ -159,7 +159,7 @@ func MultiplyMatrices(A, B [][]byte) [][]byte {
 		C[i] = make([]byte, colsB)
 		for j := 0; j < colsB; j++ {
 			for k := 0; k < colsA; k++ {
-				C[i][j] ^= gf16Mul(A[i][k], B[k][j])
+				C[i][j] ^= field.Gf16Mul(A[i][k], B[k][j])
 			}
 		}
 	}
@@ -255,9 +255,6 @@ func echelonForm(B [][]byte) [][]byte {
 	pivotColumn := 0
 	pivotRow := 0
 
-	// TODO: Fix
-	field := InitField()
-
 	for pivotRow < rows && pivotColumn < cols+1 {
 		var possiblePivots []int
 		for i := pivotRow; i < rows; i++ {
@@ -332,7 +329,7 @@ func computeRightInverse(t [][]byte) [][]byte {
 		// Normalize pivot row
 		pivotInv := invTable[augmented[i][i]]
 		for j := 0; j < N+M; j++ {
-			augmented[i][j] = gf16Mul(augmented[i][j], pivotInv)
+			augmented[i][j] = field.Gf16Mul(augmented[i][j], pivotInv)
 		}
 
 		// Eliminate other rows
@@ -340,7 +337,7 @@ func computeRightInverse(t [][]byte) [][]byte {
 			if k != i && augmented[k][i] != 0 {
 				factor := augmented[k][i]
 				for j := 0; j < N+M; j++ {
-					augmented[k][j] = augmented[k][j] ^ gf16Mul(factor, augmented[i][j])
+					augmented[k][j] = augmented[k][j] ^ field.Gf16Mul(factor, augmented[i][j])
 				}
 			}
 		}
@@ -361,7 +358,7 @@ func computeRightInverse(t [][]byte) [][]byte {
 func MultiplyVecConstant(b byte, a []byte) []byte {
 	C := make([]byte, len(a))
 	for i := range C {
-		C[i] = gf16Mul(b, a[i])
+		C[i] = field.Gf16Mul(b, a[i])
 	}
 	return C
 }

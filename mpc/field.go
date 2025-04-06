@@ -46,7 +46,7 @@ func reduceVecModF(y []byte) []byte {
 
 	for i := m + shifts - 1; i >= m; i-- {
 		for shift, coefficient := range tailF {
-			y[i-m+shift] ^= gf16Mul(y[i], coefficient)
+			y[i-m+shift] ^= field.Gf16Mul(y[i], coefficient)
 		}
 		y[i] = 0
 	}
@@ -61,7 +61,7 @@ func reduceAModF(A [][]byte) [][]byte {
 	for row := m + shifts - 1; row >= m; row-- {
 		for column := 0; column < k*o; column++ {
 			for shift, coefficient := range tailF {
-				A[row-m+shift][column] ^= gf16Mul(A[row][column], coefficient)
+				A[row-m+shift][column] ^= field.Gf16Mul(A[row][column], coefficient)
 			}
 			A[row][column] = 0
 		}

@@ -50,7 +50,20 @@ func Coin(parties []*model.Party, lambda int) []byte {
 	return result
 }
 
-func RandMatrix(r, c int) [][]byte {
+func CoinMatrix(parties []*model.Party, r, c int) [][]byte {
+	matrix := make([][]byte, r)
+	for i := range matrix {
+		matrix[i] = make([]byte, c)
+		for j := 0; j < c; j++ {
+			for range parties {
+				matrix[i][j] ^= SampleFieldElement()
+			}
+		}
+	}
+	return matrix
+}
+
+func Matrix(r, c int) [][]byte {
 	result := make([][]byte, r)
 
 	for i := 0; i < r; i++ {
@@ -64,7 +77,7 @@ func RandMatrix(r, c int) [][]byte {
 	return result
 }
 
-func RandVector(c int) []byte {
+func Vector(c int) []byte {
 	result := make([]byte, c)
 
 	for i := 0; i < c; i++ {

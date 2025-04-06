@@ -20,17 +20,17 @@ func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 		panic(fmt.Errorf("dimensions not suitable for matrix multiplication"))
 	}
 
-	a := rand.RandMatrix(r1, c1)
-	b := rand.RandMatrix(r2, c2)
+	a := rand.Matrix(r1, c1)
+	b := rand.Matrix(r2, c2)
 	c := MultiplyMatrices(a, b)
 
 	aShares := make([][][]byte, n)
 	bShares := make([][][]byte, n)
 	cShares := make([][][]byte, n)
 	for i := 0; i < n-1; i++ {
-		aShares[i] = rand.RandMatrix(r1, c1)
-		bShares[i] = rand.RandMatrix(r2, c2)
-		cShares[i] = rand.RandMatrix(r1, c2)
+		aShares[i] = rand.Matrix(r1, c1)
+		bShares[i] = rand.Matrix(r2, c2)
+		cShares[i] = rand.Matrix(r1, c2)
 
 		AddMatrices(a, aShares[i])
 		AddMatrices(b, bShares[i])

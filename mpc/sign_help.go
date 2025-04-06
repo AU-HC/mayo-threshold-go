@@ -13,7 +13,7 @@ func computeM(parties []*model.Party, message []byte) {
 
 	VReconstructed := generateZeroMatrix(k, v) // FOR CORRECTNESS
 	for _, party := range parties {
-		V := rand.RandMatrix(k, v)
+		V := rand.Matrix(k, v)
 		AddMatrices(VReconstructed, V) // FOR CORRECTNESS
 		party.Salt = salt
 		party.V = V

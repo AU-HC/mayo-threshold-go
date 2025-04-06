@@ -23,7 +23,7 @@ type ResultsForAmountOfParties struct {
 	ThresholdVerify []int64 `json:"ThresholdVerify"`
 }
 
-func Benchmark(paramSet, n int) (string, error) {
+func Benchmark(n int) (string, error) {
 	message := make([]byte, 32)
 
 	results := make([]Result, len(amountOfPartiesToBenchmark))
@@ -73,7 +73,7 @@ func Benchmark(paramSet, n int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	pathToResults := fmt.Sprintf("%s/paramset-%d-%s-%s", directory, paramSet, time.Now().Format("2006-01-02-15-04-05"), fileName)
+	pathToResults := fmt.Sprintf("%s/%s-%s-%s", directory, paramName, time.Now().Format("2006-01-02-15-04-05"), fileName)
 	fmt.Println(pathToResults)
 	err = os.WriteFile(pathToResults, resultsJson, 0644)
 	if err != nil {

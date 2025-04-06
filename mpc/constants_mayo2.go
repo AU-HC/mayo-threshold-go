@@ -2,6 +2,8 @@
 
 package mpc
 
+const paramName = "MAYO2"
+
 const n = 81
 const m = 64
 const o = 17

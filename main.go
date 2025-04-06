@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const AmountOfParties = 10
+const AmountOfParties = 3
 
 func main() {
 	// Define the message

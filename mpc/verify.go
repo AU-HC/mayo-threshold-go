@@ -6,26 +6,25 @@ import (
 	"mayo-threshold-go/rand"
 )
 
-// ThresholdVerify takes an 'secret shared' signature and checks if it is valid for the message under the public key
-func ThresholdVerify(parties []*model.Party, signature model.Signature) bool {
-	P := make([][][][]byte, len(parties))
+const Tau = 1
 
-	for partyNumber, party := range parties {
-		P[partyNumber] = calculateP(party.Epk.P1, party.Epk.P2, party.Epk.P3)
-	}
+// ThresholdVerify takes an 'secret shared' signature and checks if it is valid for the message under the public key
+func ThresholdVerify(parties []*model.Party, signature model.ThresholdSignature) bool {
+	p := parties[0]
+	P := calculateP(p.Epk.P1, p.Epk.P2, p.Epk.P3)
 
 	for i := 0; i < m; i++ {
 		triple := GenerateMultiplicationTriple(len(parties), k, n, n, k)
 		dShares := make([][][]byte, len(parties))
 		eShares := make([][][]byte, len(parties))
 
-		for partyNumber, party := range parties {
-			STimesP := MultiplyMatrices(party.Signature, P[partyNumber][i])
+		for partyNumber, _ := range parties {
+			STimesP := MultiplyMatrices(signature.S[partyNumber], P[i])
 
 			ai := triple.A[partyNumber]
 			bi := triple.B[partyNumber]
 			di := AddMatricesNew(STimesP, ai)
-			ei := AddMatricesNew(MatrixTranspose(party.Signature), bi)
+			ei := AddMatricesNew(MatrixTranspose(signature.S[partyNumber]), bi)
 
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
@@ -39,14 +38,27 @@ func ThresholdVerify(parties []*model.Party, signature model.Signature) bool {
 	}
 
 	localComputeY(parties)
+	zShares := make([][]byte, len(parties))
+	for i, party := range parties {
+		zShares[i] = party.LittleY
+	}
 
-	y := make([]byte, m)
+	alphaValues := rand.CoinMatrix(parties, m, Tau)
+	w := make([][]byte, m)
+
+	for i := 0; i < Tau; i++ {
+		for j := 0; j < m; j++ {
+			w[i] = matrixToVec(AddMatricesNew(vectorToMatrix(w[i]), vectorToMatrix(MultiplyVecConstant(alphaValues[j][i], zShares[j]))))
+		}
+	}
+
+	z := make([]byte, m)
 	for _, party := range parties {
-		y = AddVec(y, party.LittleY)
+		z = AddVec(z, party.LittleY)
 	}
 	zero := make([]byte, m)
 
-	return bytes.Equal(y, zero)
+	return bytes.Equal(z, zero)
 }
 
 // Verify takes an 'opened' signature and checks if it is valid for the message under the public key
@@ -65,13 +77,13 @@ func Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signatu
 	parties[0] = &model.Party{Y: Y, LittleT: t}
 	localComputeY(parties)
 
-	y := make([]byte, m)
+	z := make([]byte, m)
 	for _, party := range parties {
-		y = AddVec(y, party.LittleY)
+		z = AddVec(z, party.LittleY)
 	}
 	zero := make([]byte, m)
 
-	return bytes.Equal(y, zero)
+	return bytes.Equal(z, zero)
 }
 
 func calculateP(P1, P2, P3 [][][]byte) [][][]byte {

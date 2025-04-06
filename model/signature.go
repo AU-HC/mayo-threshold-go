@@ -5,6 +5,11 @@ type Signature struct {
 	Salt []byte
 }
 
+type ThresholdSignature struct {
+	S    [][][]byte
+	Salt []byte
+}
+
 func (sig *Signature) Bytes() []byte {
 	encodedSig := make([]byte, 0)
 

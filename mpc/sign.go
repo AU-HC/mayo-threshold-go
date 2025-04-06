@@ -4,9 +4,9 @@ import (
 	"mayo-threshold-go/model"
 )
 
-// Sign takes a message, parties and outputs an 'opened' signature, which can be verified using
+// ThresholdVerifiableSign takes a message, parties and outputs an 'opened' signature, which can be verified using
 // original MAYO, or using the Verify method.
-func Sign(message []byte, parties []*model.Party) model.Signature {
+func ThresholdVerifiableSign(message []byte, parties []*model.Party) model.ThresholdSignature {
 	for true {
 		// Steps 1-3 of sign
 		computeM(parties, message)
@@ -31,6 +31,23 @@ func Sign(message []byte, parties []*model.Party) model.Signature {
 	// ** Algorithm solve **
 
 	// Step 7-9 of sign
-	signature := computeSignature(parties)
-	return signature
+	thresholdSignature := computeSignature(parties)
+	return thresholdSignature
+}
+
+func Sign(message []byte, parties []*model.Party) model.Signature {
+	// Compute signature
+	thresholdSignature := ThresholdVerifiableSign(message, parties)
+
+	// Recover the signature
+	s := generateZeroMatrix(k, n)
+	for _, sigShare := range thresholdSignature.S {
+		AddMatrices(s, sigShare)
+	}
+
+	// Return the 'revealed' signature
+	return model.Signature{
+		S:    s,
+		Salt: thresholdSignature.Salt,
+	}
 }

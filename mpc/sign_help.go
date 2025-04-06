@@ -170,7 +170,7 @@ func localComputeY(parties []*model.Party) {
 	}
 }
 
-func computeSignature(parties []*model.Party) model.Signature {
+func computeSignature(parties []*model.Party) model.ThresholdSignature {
 	// [X * O^T] = [X] * [O^t]
 	triple := GenerateMultiplicationTriple(len(parties), k, o, o, v)
 	dShares := make([][][]byte, len(parties))
@@ -236,8 +236,13 @@ func computeSignature(parties []*model.Party) model.Signature {
 	}
 	// CHECK FOR CORRECTNESS
 
-	return model.Signature{
-		S:    s,
+	signatureShares := make([][][]byte, len(parties))
+	for i, party := range parties {
+		signatureShares[i] = party.Signature
+	}
+
+	return model.ThresholdSignature{
+		S:    signatureShares,
 		Salt: parties[0].Salt,
 	}
 }

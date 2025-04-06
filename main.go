@@ -14,17 +14,16 @@ func main() {
 	// Set seed for easier testing
 	rand.Seed(98)
 
-	// Get mock esk, epk from json files and define message
+	// Define the message
 	message := []byte("Hello, world!")
-	//esk, epk := mock.GetExpandedKeyPair()
 
+	// Generate expanded public key, and shares of expanded secret key for the parties
+	before := time.Now()
 	epk, parties := mpc.KeyGen(AmountOfParties)
-
-	// Start the parties, by giving them the epk and shares of the esk
-	//parties := mock.CreatePartiesAndSharesForEsk(esk, epk, AmountOfParties)
+	fmt.Println(fmt.Sprintf("Key generation with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Threshold sign message
-	before := time.Now()
+	before = time.Now()
 	sig := mpc.Sign(message, parties)
 	fmt.Println(fmt.Sprintf("Signing with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
 

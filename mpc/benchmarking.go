@@ -24,7 +24,6 @@ type ResultsForAmountOfParties struct {
 }
 
 func Benchmark(paramSet, n int) (string, error) {
-	// Initialize MAYO
 	message := make([]byte, 32)
 
 	results := make([]Result, len(amountOfPartiesToBenchmark))

@@ -42,8 +42,6 @@ func generateMulAndInvTable() ([][]byte, []byte) {
 }
 
 func reduceVecModF(y []byte) []byte {
-	tailF := []byte{8, 0, 2, 8}
-
 	for i := m + shifts - 1; i >= m; i-- {
 		for shift, coefficient := range tailF {
 			y[i-m+shift] ^= field.Gf16Mul(y[i], coefficient)
@@ -56,8 +54,6 @@ func reduceVecModF(y []byte) []byte {
 }
 
 func reduceAModF(A [][]byte) [][]byte {
-	tailF := []byte{8, 0, 2, 8}
-
 	for row := m + shifts - 1; row >= m; row-- {
 		for column := 0; column < k*o; column++ {
 			for shift, coefficient := range tailF {

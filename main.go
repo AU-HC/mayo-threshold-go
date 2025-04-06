@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"mayo-threshold-go/flags"
 	"mayo-threshold-go/mpc"
 	"time"
 )
@@ -10,6 +11,16 @@ import (
 const AmountOfParties = 3
 
 func main() {
+	// Get application flags
+	arguments := flags.GetApplicationArguments()
+	amountOfBenchmarkSamples := arguments.AmountBenchmarkingSamples
+
+	// If amount of samples > 0, then benchmark and write benchmarks to results/
+	if amountOfBenchmarkSamples > 0 {
+		benchmark(amountOfBenchmarkSamples)
+		return
+	}
+
 	// Define the message
 	message := []byte("Hello, world!")
 
@@ -34,4 +45,14 @@ func main() {
 		fmt.Println(fmt.Sprintf("Signature: '%s' is not a valid signature on the message: '%s'",
 			hex.EncodeToString(sig.Bytes()), message))
 	}
+}
+
+func benchmark(n int) {
+	path, err := mpc.Benchmark(n)
+
+	if err != nil {
+		fmt.Println("Got error while benchmarking: ", err)
+	}
+
+	fmt.Println(fmt.Sprintf("Benchmarking done, see /%s for more information", path))
 }

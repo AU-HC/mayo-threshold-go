@@ -49,7 +49,7 @@ func Benchmark(n int) (string, error) {
 
 		// Benchmark ThresholdVerify
 		verifyResults := make([]int64, n)
-		_ = ThresholdVerifiableSign(message, parties)
+		//_ = ThresholdVerifiableSign(message, parties)
 		for j := 0; j < n; j++ {
 			before := time.Now()
 			//ThresholdVerify(parties, sig)

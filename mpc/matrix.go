@@ -2,6 +2,7 @@ package mpc
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 )
 
@@ -17,49 +18,6 @@ func upper(matrix [][]byte) [][]byte {
 	}
 
 	return matrix
-}
-
-func rankOfMatrix(t [][]byte) int {
-	if len(t) == 0 || len(t[0]) == 0 {
-		return 0
-	}
-
-	rows, cols := len(t), len(t[0])
-	rank := 0
-
-	for col := 0; col < cols; col++ {
-		pivotRow := -1
-		for row := rank; row < rows; row++ {
-			if t[row][col] != 0 {
-				pivotRow = row
-				break
-			}
-		}
-
-		if pivotRow == -1 {
-			continue
-		}
-
-		t[pivotRow], t[rank] = t[rank], t[pivotRow]
-
-		pivot := t[rank][col]
-		for c := col; c < cols; c++ {
-			t[rank][c] /= pivot
-		}
-
-		for row := 0; row < rows; row++ {
-			if row != rank && t[row][col] != 0 {
-				factor := t[row][col]
-				for c := col; c < cols; c++ {
-					t[row][c] -= factor * t[rank][c]
-				}
-			}
-		}
-
-		rank++
-	}
-
-	return rank
 }
 
 func vectorToMatrix(x []byte) [][]byte {
@@ -300,6 +258,7 @@ func echelonForm(B [][]byte) [][]byte {
 	return B
 }
 
+/* ORIGINAL
 func computeRightInverse(t [][]byte) [][]byte {
 	M := len(t)    // Rows
 	N := len(t[0]) // Columns
@@ -335,6 +294,7 @@ func computeRightInverse(t [][]byte) [][]byte {
 
 		// Ensure pivot is nonzero
 		if augmented[i][i] == 0 {
+			fmt.Println("returned nil 338")
 			return nil
 		}
 
@@ -362,6 +322,139 @@ func computeRightInverse(t [][]byte) [][]byte {
 		if i < M {
 			copy(B[i], augmented[i][N:])
 		}
+	}
+
+	return B
+}
+
+*/
+
+func rankOfMatrix(t [][]byte) int {
+	if len(t) == 0 || len(t[0]) == 0 {
+		return 0
+	}
+
+	rows, cols := len(t), len(t[0])
+	rank := 0
+
+	for col := 0; col < cols; col++ {
+		pivotRow := -1
+		for row := rank; row < rows; row++ {
+			if t[row][col] != 0 {
+				pivotRow = row
+				break
+			}
+		}
+
+		if pivotRow == -1 {
+			continue
+		}
+
+		t[pivotRow], t[rank] = t[rank], t[pivotRow]
+
+		pivot := t[rank][col]
+		pivotInv := field.invTable[pivot]
+		for c := col; c < cols; c++ {
+			t[rank][c] = field.Gf16Mul(t[rank][c], pivotInv)
+		}
+
+		for row := 0; row < rows; row++ {
+			if row != rank && t[row][col] != 0 {
+				factor := t[row][col]
+				for c := col; c < cols; c++ {
+					t[row][c] ^= field.Gf16Mul(factor, t[rank][c])
+				}
+			}
+		}
+
+		rank++
+	}
+
+	return rank
+}
+
+func computeRightInverse(t [][]byte) [][]byte {
+	M := len(t)    // Rows
+	N := len(t[0]) // Columns
+
+	if M > N {
+		fmt.Println("returned nil")
+		return nil
+	}
+
+	// Augment A with an identity matrix to form (A | I)
+	augmented := make([][]byte, M)
+	for i := 0; i < M; i++ {
+		augmented[i] = make([]byte, N+M)
+		copy(augmented[i], t[i])
+		augmented[i][N+i] = 1
+	}
+
+	row := 0
+	for col := 0; col < N && row < M; col++ {
+		// Find pivot in column 'col'
+		pivotRow := -1
+		for k := row; k < M; k++ {
+			if augmented[k][col] != 0 {
+				pivotRow = k
+				break
+			}
+		}
+
+		if pivotRow == -1 {
+			continue // No pivot in this column, move to next
+		}
+
+		// Swap rows if necessary
+		if pivotRow != row {
+			augmented[row], augmented[pivotRow] = augmented[pivotRow], augmented[row]
+		}
+
+		// Normalize pivot row
+		pivotVal := augmented[row][col]
+		pivotInv := field.invTable[pivotVal]
+		for j := 0; j < N+M; j++ {
+			augmented[row][j] = field.Gf16Mul(augmented[row][j], pivotInv)
+		}
+
+		// Eliminate other rows
+		for k := 0; k < M; k++ {
+			if k != row && augmented[k][col] != 0 {
+				factor := augmented[k][col]
+				for j := 0; j < N+M; j++ {
+					augmented[k][j] ^= field.Gf16Mul(factor, augmented[row][j])
+				}
+			}
+		}
+
+		row++
+	}
+
+	// If we didn't get M pivots, return nil (not full rank)
+	if row < M {
+		fmt.Println("returned nil 432")
+		return nil
+	}
+
+	// Extract the right inverse (n x m matrix)
+	B := make([][]byte, N)
+	for i := range B {
+		B[i] = make([]byte, M)
+	}
+
+	for i := 0; i < M; i++ {
+		for j := 0; j < M; j++ {
+			B[i][j] = augmented[i][N+j]
+		}
+	}
+
+	identity := generateIdentityMatrix(M)
+
+	if !reflect.DeepEqual(MultiplyMatrices(t, B), identity) {
+		for _, r := range t {
+			fmt.Println(fmt.Sprintf("%2d", r))
+		}
+		panic("xd")
 	}
 
 	return B

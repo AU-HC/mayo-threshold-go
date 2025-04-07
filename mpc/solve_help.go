@@ -55,12 +55,7 @@ func computeT(parties []*model.Party) bool {
 		party.T = T
 	}
 
-	copyOfT := generateZeroMatrix(s, t)
-	for row := 0; row < len(T); row++ {
-		copy(copyOfT[row][:], T[row][:])
-	}
-
-	return rankOfMatrix(copyOfT) < s
+	return isFullRank(T)
 }
 
 func computeAInverse(parties []*model.Party) {

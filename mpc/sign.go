@@ -19,8 +19,8 @@ func ThresholdVerifiableSign(message []byte, parties []*model.Party) model.Thres
 		// Step 6 of sign
 		// ** Algorithm solve **
 		// Steps 1-4 of solve
-		isRankDefect := computeT(parties)
-		if !isRankDefect {
+		isTFullRank := computeT(parties)
+		if isTFullRank {
 			break
 		}
 	}

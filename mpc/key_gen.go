@@ -9,20 +9,14 @@ import (
 var algo = Shamir{n: 4, t: 2}
 
 func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
-
 	parties := make([]*model.Party, amountOfParties)
 	P1 := make([][][]byte, m)
 	P2 := make([][][]byte, m)
 	P3 := make([][][]byte, m)
 	OShares := algo.createSharesForRandomMatrix(v, o)
-	LiShares := make([][][][]byte, amountOfParties)
+	LShares := make([][][][]byte, amountOfParties)
 
-	OReconstructed := algo.openMatrix(OShares)
-
-	// Generate OShares
-	for partyNumber, _ := range parties {
-		LiShares[partyNumber] = make([][][]byte, m)
-	}
+	OReconstructed := algo.openMatrix(OShares) // FOR CORRECTNESS
 
 	// Generate P1i and P2i
 	for i := 0; i < m; i++ {
@@ -49,7 +43,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 			bi := triplesStep4[i].B[partyNumber]
 			di := AddMatricesNew(MatrixTranspose(OShares[partyNumber]), ai)
 			var ei [][]byte
-			if partyNumber == partyNumber {
+			if partyNumber == partyNumber { // TODO: variable point
 				ei = AddMatricesNew(AddMatricesNew(P1iTimeOShares[partyNumber], P2[i]), bi)
 			} else {
 				ei = AddMatricesNew(P1iTimeOShares[partyNumber], bi)
@@ -74,27 +68,26 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		}
 
 		// Open P3
-		p3i := generateZeroMatrix(o, o)
-		for partyNumber, _ := range parties {
-			AddMatrices(p3i, P3iShares[partyNumber])
-		}
+		p3i := algo.openMatrix(P3iShares)
 		P3[i] = p3i
 
 		// Compute locally [(P1i + P1i^T) * OShares] + P2i
+		LiShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
-			if partyNumber == 0 {
-				LiShares[partyNumber][i] = AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber]), P2[i])
+			if partyNumber == partyNumber { // TODO: variable point
+				LiShares[partyNumber] = AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber]), P2[i])
 			} else {
-				LiShares[partyNumber][i] = MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber])
+				LiShares[partyNumber] = MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber])
 			}
 		}
 
-		// CHECK FOR CORRECTNESS
-		LiReconstructed := generateZeroMatrix(v, o)
 		for partyNumber, _ := range parties {
-			AddMatrices(LiReconstructed, LiShares[partyNumber][i])
+			LShares[partyNumber] = LiShares
 		}
-		if !reflect.DeepEqual(LiReconstructed, AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OReconstructed), P2[i])) {
+
+		// CHECK FOR CORRECTNESS
+		Li := algo.openMatrix(LiShares)
+		if !reflect.DeepEqual(Li, AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OReconstructed), P2[i])) {
 			panic("Li is not equal to (P1i + P1i^T) * O + P2i")
 		}
 		// CHECK FOR CORRECTNESS
@@ -109,7 +102,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 
 	// Set the epk and the esk shares
 	for partyNumber, _ := range parties {
-		eskShare := model.ExpandedSecretKey{P1: P1, L: LiShares[partyNumber], O: OShares[partyNumber]}
+		eskShare := model.ExpandedSecretKey{P1: P1, L: LShares[partyNumber], O: OShares[partyNumber]}
 		party := &model.Party{EskShare: eskShare, Epk: epk}
 		parties[partyNumber] = party
 	}

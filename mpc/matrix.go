@@ -309,7 +309,7 @@ func isFullRank(matrix [][]byte) bool {
 	rank := 0
 
 	// Copy the matrix
-	B := make([][]byte, len(matrix))
+	B := make([][]byte, r)
 	for i := range matrix {
 		B[i] = make([]byte, len(matrix[i]))
 		copy(B[i], matrix[i])
@@ -320,7 +320,14 @@ func isFullRank(matrix [][]byte) bool {
 
 	// Count non-zero rows
 	for i := 0; i < r; i++ {
-		if B[i][i] == 1 {
+		isNonZero := false
+		for j := i; j < c; j++ {
+			if B[i][j] != 0 {
+				isNonZero = true
+				break
+			}
+		}
+		if isNonZero {
 			rank++
 		}
 	}
@@ -328,6 +335,91 @@ func isFullRank(matrix [][]byte) bool {
 	return rank == minRank
 }
 
+func computeRightInverse(A [][]byte) [][]byte {
+	M := len(A)    // Rows
+	N := len(A[0]) // Columns
+
+	if M > N {
+		fmt.Println("Matrix is not full row rank or too tall; no right inverse.")
+		return nil
+	}
+
+	identity := generateIdentityMatrix(M)
+
+	// Right inverse will be N x M
+	B := make([][]byte, N)
+	for i := range B {
+		B[i] = make([]byte, M)
+	}
+
+	// Preallocate augmented matrix
+	aug := make([][]byte, M)
+	for i := range aug {
+		aug[i] = make([]byte, N+1)
+	}
+
+	pivotCols := make([]int, M)
+
+	for col := 0; col < M; col++ {
+		// Build augmented matrix [A | e_col]
+		for i := 0; i < M; i++ {
+			copy(aug[i][:N], A[i])
+			aug[i][N] = identity[i][col]
+		}
+
+		// Gaussian elimination
+		for row := 0; row < M; row++ {
+			pivotCol := -1
+			found := false
+			for c := row; c < N && !found; c++ {
+				for r := row; r < M; r++ {
+					if aug[r][c] != 0 {
+						if r != row {
+							aug[row], aug[r] = aug[r], aug[row]
+						}
+						pivotCol = c
+						found = true
+						break
+					}
+				}
+			}
+			if pivotCol == -1 {
+				return nil // Not full rank
+			}
+			pivotCols[row] = pivotCol
+
+			// Normalize pivot row
+			inv := field.invTable[aug[row][pivotCol]]
+			for j := 0; j <= N; j++ {
+				aug[row][j] = field.Gf16Mul(aug[row][j], inv)
+			}
+
+			// Eliminate other rows
+			for i := 0; i < M; i++ {
+				if i != row && aug[i][pivotCol] != 0 {
+					factor := aug[i][pivotCol]
+					for j := 0; j <= N; j++ {
+						aug[i][j] ^= field.Gf16Mul(factor, aug[row][j])
+					}
+				}
+			}
+		}
+
+		// Extract solution vector
+		for i := 0; i < M; i++ {
+			B[pivotCols[i]][col] = aug[i][N]
+		}
+	}
+
+	// Optional: check A * B == identity
+	if !reflect.DeepEqual(MultiplyMatrices(A, B), identity) {
+		panic("Matrix multiplication check failed; no valid right inverse")
+	}
+
+	return B
+}
+
+/*
 func computeRightInverse(A [][]byte) [][]byte {
 	M := len(A)    // Rows
 	N := len(A[0]) // Columns
@@ -405,7 +497,7 @@ func computeRightInverse(A [][]byte) [][]byte {
 	}
 
 	return B
-}
+}*/
 
 func MultiplyVecConstant(b byte, a []byte) []byte {
 	C := make([]byte, len(a))

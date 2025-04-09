@@ -66,7 +66,6 @@ func Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signatu
 	P := calculateP(epk.P1, epk.P2, epk.P3)
 	Y := make([][][]byte, m)
 	t := rand.Shake256(m, message, signature.Salt)
-	parties := make([]*model.Party, 1)
 
 	for i := 0; i < m; i++ {
 		STimesP := MultiplyMatrices(signature.S, P[i])
@@ -74,16 +73,12 @@ func Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signatu
 	}
 
 	// Create party, due to how code is structured
+	parties := make([]*model.Party, 1)
 	parties[0] = &model.Party{Y: Y, LittleT: t}
 	localComputeY(parties)
 
-	z := make([]byte, m)
-	for _, party := range parties {
-		z = AddVec(z, party.LittleY)
-	}
 	zero := make([]byte, m)
-
-	return bytes.Equal(z, zero)
+	return bytes.Equal(parties[0].LittleY, zero)
 }
 
 func calculateP(P1, P2, P3 [][][]byte) [][][]byte {

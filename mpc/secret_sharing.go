@@ -6,6 +6,7 @@ type SecretSharingAlgo interface {
 	openMatrix(shares [][][]byte) [][]byte
 	createSharesForMatrix([][]byte) [][][]byte
 	createSharesForRandomMatrix(rows, cols int) [][][]byte
+	shouldPartyAddConstantShare(partyNumber int) bool
 }
 
 type Shamir struct {
@@ -61,6 +62,10 @@ func (s *Shamir) createSharesForRandomMatrix(rows, cols int) [][][]byte {
 	return s.createSharesForMatrix(randomMatrix)
 }
 
+func (s *Shamir) shouldPartyAddConstantShare(partyNumber int) bool {
+	return true
+}
+
 type Additive struct {
 	n int
 }
@@ -76,11 +81,30 @@ func (a *Additive) openMatrix(shares [][][]byte) [][]byte {
 	return result
 }
 
-func (a *Additive) createSharesForMatrix(rows, cols int) [][][]byte {
+func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) [][][]byte {
+	rows, cols := len(secretMatrix), len(secretMatrix[0])
+	shares := make([][][]byte, a.n)
+	sharesSum := generateZeroMatrix(rows, cols)
+
+	for i := 0; i < a.n-1; i++ { // sample shares for n-1 parties
+		share := rand.Matrix(rows, cols)
+		shares[i] = share
+		AddMatrices(sharesSum, share)
+	}
+
+	shares[a.n-1] = AddMatricesNew(secretMatrix, sharesSum)
+	return shares
+}
+
+func (a *Additive) createSharesForRandomMatrix(rows, cols int) [][][]byte {
 	shares := make([][][]byte, a.n)
 	for i := 0; i < a.n; i++ {
 		shares[i] = rand.Matrix(rows, cols)
 	}
 
 	return shares
+}
+
+func (a *Additive) shouldPartyAddConstantShare(partyNumber int) bool {
+	return partyNumber == 0
 }

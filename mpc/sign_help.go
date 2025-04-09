@@ -168,7 +168,7 @@ func localComputeY(parties []*model.Party) {
 		}
 
 		y = reduceVecModF(y)
-		if partyNumber == partyNumber { // TODO: variable point
+		if algo.shouldPartyAddConstantShare(partyNumber) {
 			t := party.LittleT
 			for i := 0; i < m; i++ {
 				y[i] ^= t[i]

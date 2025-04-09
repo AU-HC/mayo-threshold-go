@@ -47,7 +47,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 			bi := triplesStep4[i].B[partyNumber]
 			di := AddMatricesNew(MatrixTranspose(OShares[partyNumber]), ai)
 			var ei [][]byte
-			if partyNumber == partyNumber { // TODO: variable point
+			if algo.shouldPartyAddConstantShare(partyNumber) {
 				ei = AddMatricesNew(AddMatricesNew(P1iTimeOShares[partyNumber], P2[i]), bi)
 			} else {
 				ei = AddMatricesNew(P1iTimeOShares[partyNumber], bi)
@@ -66,7 +66,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		// CHECK FOR CORRECTNESS
 
 		// Compute Upper of P3i
-		P3iShares := make([][][]byte, m)
+		P3iShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
 			P3iShares[partyNumber] = upper(step4Shares[partyNumber])
 		}
@@ -78,7 +78,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		// Compute locally [(P1i + P1i^T) * OShares] + P2i
 		LiShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
-			if partyNumber == partyNumber { // TODO: variable point
+			if algo.shouldPartyAddConstantShare(partyNumber) {
 				LiShares[partyNumber] = AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber]), P2[i])
 			} else {
 				LiShares[partyNumber] = MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber])

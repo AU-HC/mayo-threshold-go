@@ -60,7 +60,7 @@ func multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares
 		AddMatrices(db, ae)          // d * [b] + [a] * e
 		AddMatrices(db, c)           // d * [b] + [a] * e + [c]
 
-		if partyNumber == partyNumber { // TODO: variable point
+		if algo.shouldPartyAddConstantShare(partyNumber) {
 			AddMatrices(db, de) // d * [b] + [a] * e + [c] + d * e
 		}
 

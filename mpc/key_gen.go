@@ -6,17 +6,18 @@ import (
 	"reflect"
 )
 
+var algo = Shamir{n: 3, t: 2}
+
 func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 	parties := make([]*model.Party, amountOfParties)
 	P1 := make([][][]byte, m)
 	P2 := make([][][]byte, m)
 	P3 := make([][][]byte, m)
-	OShares := make([][][]byte, amountOfParties)
+	OShares := algo.createSharesForMatrix(v, o)
 	LiShares := make([][][][]byte, amountOfParties)
 
 	// Generate OShares
 	for partyNumber, _ := range parties {
-		OShares[partyNumber] = rand.Matrix(v, o)
 		LiShares[partyNumber] = make([][][]byte, m)
 	}
 
@@ -51,15 +52,11 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
 		}
-		Step4Shares := multiplicationProtocol(parties, triplesStep4[i], dShares, eShares, o, v, v, o)
+		step4Shares := multiplicationProtocol(parties, triplesStep4[i], dShares, eShares, o, v, v, o)
 
 		// CHECK FOR CORRECTNESS
-		Step4Reconstructed := generateZeroMatrix(o, o)
-		OReconstructed := generateZeroMatrix(v, o)
-		for partyNumber, _ := range parties {
-			AddMatrices(Step4Reconstructed, Step4Shares[partyNumber])
-			AddMatrices(OReconstructed, OShares[partyNumber])
-		}
+		Step4Reconstructed := algo.openMatrix(step4Shares)
+		OReconstructed := algo.openMatrix(OShares)
 		if !reflect.DeepEqual(Step4Reconstructed, MultiplyMatrices(MatrixTranspose(OReconstructed), AddMatricesNew(MultiplyMatrices(P1[i], OReconstructed), P2[i]))) {
 			panic("Step4 is not equal to O^T * (P1i * O - P2i)")
 		}
@@ -68,7 +65,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		// Compute Upper of P3i
 		P3iShares := make([][][]byte, m)
 		for partyNumber, _ := range parties {
-			P3iShares[partyNumber] = upper(Step4Shares[partyNumber])
+			P3iShares[partyNumber] = upper(step4Shares[partyNumber])
 		}
 
 		// Open P3

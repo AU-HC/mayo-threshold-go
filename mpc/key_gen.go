@@ -18,6 +18,10 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 
 	OReconstructed := algo.openMatrix(OShares) // FOR CORRECTNESS
 
+	for i := 0; i < amountOfParties; i++ {
+		LShares[i] = make([][][]byte, m)
+	}
+
 	// Generate P1i and P2i
 	for i := 0; i < m; i++ {
 		P1[i] = rand.CoinMatrix(parties, v, v)
@@ -82,7 +86,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		}
 
 		for partyNumber, _ := range parties {
-			LShares[partyNumber] = LiShares
+			LShares[partyNumber][i] = LiShares[partyNumber]
 		}
 
 		// CHECK FOR CORRECTNESS

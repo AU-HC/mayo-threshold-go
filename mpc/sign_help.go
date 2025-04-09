@@ -11,16 +11,20 @@ func computeM(parties []*model.Party, message []byte) {
 	t := rand.Shake256(m, message, salt)
 	triples := GenerateMultiplicationTriples(len(parties), k, v, v, o, m) // V: k x v, Li: v x o
 
-	VReconstructed := generateZeroMatrix(k, v) // FOR CORRECTNESS
 	for _, party := range parties {
 		V := rand.Matrix(k, v)
-		AddMatrices(VReconstructed, V) // FOR CORRECTNESS
 		party.Salt = salt
 		party.V = V
 		party.LittleT = t
 		party.M = make([][][]byte, m)
 		party.Y = make([][][]byte, m)
 	}
+
+	VShares := make([][][]byte, len(parties))
+	for i, party := range parties {
+		VShares[i] = party.V
+	}
+	VOpen := algo.openMatrix(VShares)
 
 	for i := 0; i < m; i++ {
 		dShares := make([][][]byte, len(parties))
@@ -33,7 +37,7 @@ func computeM(parties []*model.Party, message []byte) {
 			di := AddMatricesNew(party.V, ai)
 			ei := AddMatricesNew(party.EskShare.L[i], bi)
 
-			party.VReconstructed = VReconstructed
+			party.VReconstructed = VOpen
 
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
@@ -46,13 +50,16 @@ func computeM(parties []*model.Party, message []byte) {
 		}
 
 		// CHECK FOR CORRECTNESS
-		MReconstructed := generateZeroMatrix(k, o)
-		LReconstructed := generateZeroMatrix(v, o)
-		for _, party := range parties {
-			AddMatrices(MReconstructed, party.M[i])
-			AddMatrices(LReconstructed, party.EskShare.L[i])
+		MShares := make([][][]byte, len(parties))
+		LShares := make([][][]byte, len(parties))
+		for partyNumber, party := range parties {
+			MShares[partyNumber] = party.M[i]
+			LShares[partyNumber] = party.EskShare.L[i]
 		}
-		if !reflect.DeepEqual(MReconstructed, MultiplyMatrices(VReconstructed, LReconstructed)) {
+		MOpen := algo.openMatrix(MShares)
+		LOpen := algo.openMatrix(LShares)
+
+		if !reflect.DeepEqual(MOpen, MultiplyMatrices(VOpen, LOpen)) {
 			panic("M is not equal to V * L")
 		}
 		// CHECK FOR CORRECTNESS

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const AmountOfParties = 3
+const AmountOfParties = 4
 
 func main() {
 	// Get application flags

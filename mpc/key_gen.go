@@ -6,15 +6,18 @@ import (
 	"reflect"
 )
 
-var algo = Shamir{n: 3, t: 2}
+var algo = Shamir{n: 4, t: 2}
 
 func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
+
 	parties := make([]*model.Party, amountOfParties)
 	P1 := make([][][]byte, m)
 	P2 := make([][][]byte, m)
 	P3 := make([][][]byte, m)
-	OShares := algo.createSharesForMatrix(v, o)
+	OShares := algo.createSharesForRandomMatrix(v, o)
 	LiShares := make([][][][]byte, amountOfParties)
+
+	OReconstructed := algo.openMatrix(OShares)
 
 	// Generate OShares
 	for partyNumber, _ := range parties {
@@ -29,10 +32,13 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 
 	triplesStep4 := GenerateMultiplicationTriples(amountOfParties, o, v, v, o, m)
 	for i := 0; i < m; i++ {
-		// Compute [P1i * OShares]
+		// Compute [P1i * O]
 		P1iTimeOShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
 			P1iTimeOShares[partyNumber] = MultiplyMatrices(P1[i], OShares[partyNumber])
+		}
+		if !reflect.DeepEqual(algo.openMatrix(P1iTimeOShares), MultiplyMatrices(P1[i], OReconstructed)) {
+			panic("incorrect computation")
 		}
 
 		// Compute [O^T * (P1i * O - P2i)]
@@ -43,7 +49,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 			bi := triplesStep4[i].B[partyNumber]
 			di := AddMatricesNew(MatrixTranspose(OShares[partyNumber]), ai)
 			var ei [][]byte
-			if partyNumber == 0 {
+			if partyNumber == partyNumber {
 				ei = AddMatricesNew(AddMatricesNew(P1iTimeOShares[partyNumber], P2[i]), bi)
 			} else {
 				ei = AddMatricesNew(P1iTimeOShares[partyNumber], bi)
@@ -56,7 +62,6 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 
 		// CHECK FOR CORRECTNESS
 		Step4Reconstructed := algo.openMatrix(step4Shares)
-		OReconstructed := algo.openMatrix(OShares)
 		if !reflect.DeepEqual(Step4Reconstructed, MultiplyMatrices(MatrixTranspose(OReconstructed), AddMatricesNew(MultiplyMatrices(P1[i], OReconstructed), P2[i]))) {
 			panic("Step4 is not equal to O^T * (P1i * O - P2i)")
 		}

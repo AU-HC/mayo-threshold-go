@@ -24,32 +24,14 @@ func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 	b := rand.Matrix(r2, c2)
 	c := MultiplyMatrices(a, b)
 
-	aShares := make([][][]byte, n)
-	bShares := make([][][]byte, n)
-	cShares := make([][][]byte, n)
-	for i := 0; i < n-1; i++ {
-		aShares[i] = rand.Matrix(r1, c1)
-		bShares[i] = rand.Matrix(r2, c2)
-		cShares[i] = rand.Matrix(r1, c2)
-
-		AddMatrices(a, aShares[i])
-		AddMatrices(b, bShares[i])
-		AddMatrices(c, cShares[i])
-	}
-
-	aShares[n-1] = a
-	bShares[n-1] = b
-	cShares[n-1] = c
+	aShares := algo.createSharesForMatrix(a)
+	bShares := algo.createSharesForMatrix(b)
+	cShares := algo.createSharesForMatrix(c)
 
 	// Reconstruct a, b, c
-	aReconstructed := generateZeroMatrix(r1, c1)
-	bReconstructed := generateZeroMatrix(r2, c2)
-	cReconstructed := generateZeroMatrix(r1, c2)
-	for i := 0; i < n; i++ {
-		AddMatrices(aReconstructed, aShares[i])
-		AddMatrices(bReconstructed, bShares[i])
-		AddMatrices(cReconstructed, cShares[i])
-	}
+	aReconstructed := algo.openMatrix(aShares)
+	bReconstructed := algo.openMatrix(bShares)
+	cReconstructed := algo.openMatrix(cShares)
 	if !reflect.DeepEqual(cReconstructed, MultiplyMatrices(aReconstructed, bReconstructed)) {
 		panic(fmt.Errorf("c is not the product of a and b"))
 	}
@@ -64,12 +46,8 @@ func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 func multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares, eShares [][][]byte, dRow, dCol, eRow, eCol int) [][][]byte {
 	zShares := make([][][]byte, len(parties))
 
-	d := generateZeroMatrix(dRow, dCol)
-	e := generateZeroMatrix(eRow, eCol)
-	for j := range parties {
-		AddMatrices(d, dShares[j])
-		AddMatrices(e, eShares[j])
-	}
+	d := algo.openMatrix(dShares)
+	e := algo.openMatrix(eShares)
 
 	for partyNumber := range parties {
 		a := triple.A[partyNumber]
@@ -82,7 +60,7 @@ func multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares
 		AddMatrices(db, ae)          // d * [b] + [a] * e
 		AddMatrices(db, c)           // d * [b] + [a] * e + [c]
 
-		if partyNumber == 0 {
+		if partyNumber == partyNumber {
 			AddMatrices(db, de) // d * [b] + [a] * e + [c] + d * e
 		}
 

@@ -4,7 +4,8 @@ import "mayo-threshold-go/rand"
 
 type SecretSharingAlgo interface {
 	openMatrix(shares [][][]byte) [][]byte
-	createSharesForMatrix(rows, cols int) [][][]byte
+	createSharesForMatrix([][]byte) [][][]byte
+	createSharesForRandomMatrix(rows, cols int) [][][]byte
 }
 
 type Shamir struct {
@@ -20,8 +21,8 @@ func (s *Shamir) openMatrix(shares [][][]byte) [][]byte {
 		secretMatrix[row] = make([]byte, cols)
 		for col := 0; col < cols; col++ {
 			// Gather the t shares for this matrix element
-			elementShares := make([]byte, s.n)
-			for partyNumber := 0; partyNumber < s.n; partyNumber++ {
+			elementShares := make([]byte, s.t)
+			for partyNumber := 0; partyNumber < s.t; partyNumber++ {
 				elementShares[partyNumber] = shares[partyNumber][row][col]
 			}
 
@@ -33,7 +34,9 @@ func (s *Shamir) openMatrix(shares [][][]byte) [][]byte {
 	return secretMatrix
 }
 
-func (s *Shamir) createSharesForMatrix(rows, cols int) [][][]byte {
+func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) [][][]byte {
+	rows, cols := len(secretMatrix), len(secretMatrix[0])
+
 	shares := make([][][]byte, s.n)
 	for i := 0; i < s.n; i++ {
 		shares[i] = generateZeroMatrix(rows, cols)
@@ -41,7 +44,7 @@ func (s *Shamir) createSharesForMatrix(rows, cols int) [][][]byte {
 
 	for r := 0; r < rows; r++ {
 		for c := 0; c < cols; c++ {
-			secretByte := byte(5) //rand.SampleFieldElement()
+			secretByte := secretMatrix[r][c] //rand.SampleFieldElement()
 			byteShares := createShares(secretByte, s.n, s.t)
 
 			for partyNumber := 0; partyNumber < s.n; partyNumber++ {
@@ -51,6 +54,11 @@ func (s *Shamir) createSharesForMatrix(rows, cols int) [][][]byte {
 	}
 
 	return shares
+}
+
+func (s *Shamir) createSharesForRandomMatrix(rows, cols int) [][][]byte {
+	randomMatrix := rand.Matrix(rows, cols)
+	return s.createSharesForMatrix(randomMatrix)
 }
 
 type Additive struct {

@@ -90,11 +90,12 @@ func computeY(parties []*model.Party) {
 		}
 
 		// CHECK FOR CORRECTNESS
-		YReconstructed := generateZeroMatrix(k, k)
-		for _, party := range parties {
-			AddMatrices(YReconstructed, party.Y[i])
+		YShares := make([][][]byte, len(parties))
+		for partyNumber, party := range parties {
+			YShares[partyNumber] = party.Y[i]
 		}
-		if !reflect.DeepEqual(YReconstructed, MultiplyMatrices(MultiplyMatrices(parties[0].VReconstructed,
+		YOpen := algo.openMatrix(YShares)
+		if !reflect.DeepEqual(YOpen, MultiplyMatrices(MultiplyMatrices(parties[0].VReconstructed,
 			parties[0].Epk.P1[i]), MatrixTranspose(parties[0].VReconstructed))) {
 			panic("Y is not equal to V * P1 * V^T")
 		}
@@ -167,7 +168,7 @@ func localComputeY(parties []*model.Party) {
 		}
 
 		y = reduceVecModF(y)
-		if partyNumber == 0 {
+		if partyNumber == partyNumber { // TODO: variable point
 			t := party.LittleT
 			for i := 0; i < m; i++ {
 				y[i] ^= t[i]
@@ -198,44 +199,43 @@ func computeSignature(parties []*model.Party) model.ThresholdSignature {
 	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares, k, o, o, v)
 
 	// CHECK FOR CORRECTNESS
-	xTimesOTransposedReconstructed := generateZeroMatrix(k, v)
-	XReconstructed := generateZeroMatrix(k, o)
-	OReconstructed := generateZeroMatrix(v, o)
-	VReconstructed := generateZeroMatrix(k, v)
-	for i, party := range parties {
-		AddMatrices(xTimesOTransposedReconstructed, xTimesOTransposedShares[i])
-		AddMatrices(XReconstructed, party.X)
-		AddMatrices(OReconstructed, party.EskShare.O)
-		AddMatrices(VReconstructed, party.V)
+	xTimesOTransposedOpen := algo.openMatrix(xTimesOTransposedShares)
+	XShares := make([][][]byte, len(parties))
+	OShares := make([][][]byte, len(parties))
+	VShares := make([][][]byte, len(parties))
+	for partyNumber, party := range parties {
+		XShares[partyNumber] = party.X
+		OShares[partyNumber] = party.EskShare.O
+		VShares[partyNumber] = party.V
 	}
-	if !reflect.DeepEqual(xTimesOTransposedReconstructed, MultiplyMatrices(XReconstructed, MatrixTranspose(OReconstructed))) {
+	XOpen := algo.openMatrix(XShares)
+	OOpen := algo.openMatrix(OShares)
+	VOpen := algo.openMatrix(VShares)
+	if !reflect.DeepEqual(xTimesOTransposedOpen, MultiplyMatrices(XOpen, MatrixTranspose(OOpen))) {
 		panic("XO^T != X * O^T")
 	}
-	if !reflect.DeepEqual(xTimesOTransposedReconstructed, MatrixTranspose(MultiplyMatrices(OReconstructed, MatrixTranspose(XReconstructed)))) {
+	if !reflect.DeepEqual(xTimesOTransposedOpen, MatrixTranspose(MultiplyMatrices(OOpen, MatrixTranspose(XOpen)))) {
 		panic("XO^T != (OX^T)^T")
 	}
 	// CHECK FOR CORRECTNESS
 
 	// [S'] = [V + (OX^T)^T)]
-	for i, party := range parties {
-		party.SPrime = AddMatricesNew(party.V, xTimesOTransposedShares[i])
+	SPrimeShares := make([][][]byte, len(parties))
+	for partyNumber, party := range parties {
+		SPrimeShares[partyNumber] = AddMatricesNew(party.V, xTimesOTransposedShares[partyNumber])
+		party.SPrime = SPrimeShares[partyNumber]
 	}
 
 	// Open S' and X
-	SPrimeReconstructed := generateZeroMatrix(k, v)
-	xReconstructed := generateZeroMatrix(k, o)
-	for _, party := range parties {
-		AddMatrices(SPrimeReconstructed, party.SPrime)
-		AddMatrices(xReconstructed, party.X)
-	}
+	SPrimeOpen := algo.openMatrix(SPrimeShares)
 
-	s := appendMatrixHorizontal(SPrimeReconstructed, xReconstructed)
+	s := appendMatrixHorizontal(SPrimeOpen, XOpen)
 	for _, party := range parties {
 		party.Signature = appendMatrixHorizontal(party.SPrime, party.X)
 	}
 
 	// CHECK FOR CORRECTNESS
-	if !reflect.DeepEqual(SPrimeReconstructed, AddMatricesNew(VReconstructed, xTimesOTransposedReconstructed)) {
+	if !reflect.DeepEqual(SPrimeOpen, AddMatricesNew(VOpen, xTimesOTransposedOpen)) {
 		panic("S' != V + XO^T")
 	}
 	if (len(s) * len(s[0])) != (k * n) {

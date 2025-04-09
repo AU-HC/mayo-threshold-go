@@ -40,10 +40,7 @@ func Sign(message []byte, parties []*model.Party) model.Signature {
 	thresholdSignature := ThresholdVerifiableSign(message, parties)
 
 	// Recover the signature
-	s := generateZeroMatrix(k, n)
-	for _, sigShare := range thresholdSignature.S {
-		AddMatrices(s, sigShare)
-	}
+	s := algo.openMatrix(thresholdSignature.S)
 
 	// Return the 'revealed' signature
 	return model.Signature{

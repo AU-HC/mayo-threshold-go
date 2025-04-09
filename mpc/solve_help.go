@@ -13,12 +13,17 @@ func computeT(parties []*model.Party) bool {
 	triplesStep2 := GenerateMultiplicationTriple(len(parties), s, t, t, t)
 	triplesStep3 := GenerateMultiplicationTriple(len(parties), s, s, s, t)
 
+	SShares := algo.createSharesForRandomMatrix(t, t)
+	RShares := algo.createSharesForRandomMatrix(s, s)
+	for partyNumber, party := range parties {
+		party.S = SShares[partyNumber]
+		party.R = RShares[partyNumber]
+	}
+
 	// Compute [A * S] = [A] * [S]
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		party.S = rand.Matrix(t, t)
-
 		ai := triplesStep2.A[partyNumber]
 		bi := triplesStep2.B[partyNumber]
 		di := AddMatricesNew(party.A, ai)
@@ -33,8 +38,6 @@ func computeT(parties []*model.Party) bool {
 	dShares = make([][][]byte, len(parties))
 	eShares = make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		party.R = rand.Matrix(s, s)
-
 		ai := triplesStep3.A[partyNumber]
 		bi := triplesStep3.B[partyNumber]
 		di := AddMatricesNew(party.R, ai)
@@ -46,10 +49,7 @@ func computeT(parties []*model.Party) bool {
 	TShares := multiplicationProtocol(parties, triplesStep3, dShares, eShares, s, s, s, t)
 
 	// Open T and check rank
-	T := generateZeroMatrix(s, t)
-	for _, tShare := range TShares {
-		AddMatrices(T, tShare)
-	}
+	T := algo.openMatrix(TShares)
 
 	for _, party := range parties {
 		party.T = T
@@ -144,24 +144,27 @@ func computeLittleX(parties []*model.Party) {
 	}
 
 	// CHECK FOR CORRECTNESS
-	AReconstructed := generateZeroMatrix(s, t)
-	XReconstructed := generateZeroMatrix(t, 1)
-	YReconstructed := generateZeroMatrix(s, 1)
-	for _, party := range parties {
-		AddMatrices(AReconstructed, party.A)
-		AddMatrices(XReconstructed, vectorToMatrix(party.LittleX))
-		AddMatrices(YReconstructed, vectorToMatrix(party.LittleY))
+	AShares := make([][][]byte, len(parties))
+	XShares := make([][][]byte, len(parties))
+	YShares := make([][][]byte, len(parties))
+	for partyNumber, party := range parties {
+		AShares[partyNumber] = party.A
+		XShares[partyNumber] = vectorToMatrix(party.LittleX)
+		YShares[partyNumber] = vectorToMatrix(party.LittleY)
 	}
+	AOpen := algo.openMatrix(AShares)
+	XOpen := algo.openMatrix(XShares)
+	YOpen := algo.openMatrix(YShares)
 	// CHECK FOR CORRECTNESS
 
 	//p := parties[0]
-	ATimesX := MultiplyMatrices(AReconstructed, XReconstructed)
+	ATimesX := MultiplyMatrices(AOpen, XOpen)
 	//xd1 := MultiplyMatrices(p.A, AddMatricesNew(MultiplyMatrices(p.AInverse, vectorToMatrix(p.LittleY)), MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
 	//xd2 := AddMatricesNew(MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))), MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
 	//xd3 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))))), MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))))
 	//xd4 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.T, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))), MultiplyMatrices(p.T, vectorToMatrix(p.Z))))
 	//xd5 := MultiplyMatrices(computeRightInverse(p.R), MultiplyMatrices(Identity(s), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))
-	xd6 := YReconstructed
+	xd6 := YOpen
 	if !reflect.DeepEqual(ATimesX, xd6) {
 		panic("solve did not find a correct solution")
 	}

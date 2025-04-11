@@ -28,7 +28,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		P2[i] = rand.CoinMatrix(parties, v, o)
 	}
 
-	triplesStep4 := GenerateMultiplicationTriples(amountOfParties, o, v, v, o, m)
+	triplesStep4 := GenerateMultiplicationTriples(o, v, v, o, m)
 	for i := 0; i < m; i++ {
 		// Compute [P1i * O]
 		P1iTimeOShares := make([][][]byte, amountOfParties)
@@ -56,7 +56,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
 		}
-		step4Shares := multiplicationProtocol(parties, triplesStep4[i], dShares, eShares, o, v, v, o)
+		step4Shares := multiplicationProtocol(parties, triplesStep4[i], dShares, eShares)
 
 		// CHECK FOR CORRECTNESS
 		Step4Reconstructed := algo.openMatrix(step4Shares)

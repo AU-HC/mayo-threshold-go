@@ -9,7 +9,7 @@ import (
 func computeM(parties []*model.Party, message []byte) {
 	salt := rand.Coin(parties, lambda)
 	t := rand.Shake256(m, message, salt)
-	triples := GenerateMultiplicationTriples(len(parties), k, v, v, o, m) // V: k x v, Li: v x o
+	triples := GenerateMultiplicationTriples(k, v, v, o, m) // V: k x v, Li: v x o
 
 	for _, party := range parties {
 		V := rand.Matrix(k, v)
@@ -44,7 +44,7 @@ func computeM(parties []*model.Party, message []byte) {
 		}
 
 		// Open d, e and compute locally
-		zShares := multiplicationProtocol(parties, triples[i], dShares, eShares, k, v, v, o)
+		zShares := multiplicationProtocol(parties, triples[i], dShares, eShares)
 		for partyNumber, party := range parties {
 			party.M[i] = zShares[partyNumber]
 		}
@@ -67,7 +67,7 @@ func computeM(parties []*model.Party, message []byte) {
 }
 
 func computeY(parties []*model.Party) {
-	triples := GenerateMultiplicationTriples(len(parties), k, v, v, k, m) // V*P_1: k * v, V^T: v x k
+	triples := GenerateMultiplicationTriples(k, v, v, k, m) // V*P_1: k * v, V^T: v x k
 	for i := 0; i < m; i++ {
 		dShares := make([][][]byte, len(parties))
 		eShares := make([][][]byte, len(parties))
@@ -84,7 +84,7 @@ func computeY(parties []*model.Party) {
 		}
 
 		// Open d, e and compute locally
-		zShares := multiplicationProtocol(parties, triples[i], dShares, eShares, k, v, v, k)
+		zShares := multiplicationProtocol(parties, triples[i], dShares, eShares)
 		for partyNumber, party := range parties {
 			party.Y[i] = zShares[partyNumber]
 		}
@@ -180,7 +180,7 @@ func localComputeY(parties []*model.Party) {
 
 func computeSignature(parties []*model.Party) model.ThresholdSignature {
 	// [X * O^T] = [X] * [O^t]
-	triple := GenerateMultiplicationTriple(len(parties), k, o, o, v)
+	triple := GenerateMultiplicationTriple(k, o, o, v)
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
@@ -196,7 +196,7 @@ func computeSignature(parties []*model.Party) model.ThresholdSignature {
 	}
 
 	// Open d, e and compute locally
-	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares, k, o, o, v)
+	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares)
 
 	// CHECK FOR CORRECTNESS
 	xTimesOTransposedOpen := algo.openMatrix(xTimesOTransposedShares)

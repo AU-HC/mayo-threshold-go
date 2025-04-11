@@ -10,8 +10,8 @@ import (
 func computeT(parties []*model.Party) bool {
 	s := len(parties[0].A)
 	t := len(parties[0].A[0])
-	triplesStep2 := GenerateMultiplicationTriple(len(parties), s, t, t, t)
-	triplesStep3 := GenerateMultiplicationTriple(len(parties), s, s, s, t)
+	triplesStep2 := GenerateMultiplicationTriple(s, t, t, t)
+	triplesStep3 := GenerateMultiplicationTriple(s, s, s, t)
 
 	SShares := algo.createSharesForRandomMatrix(t, t)
 	RShares := algo.createSharesForRandomMatrix(s, s)
@@ -32,7 +32,7 @@ func computeT(parties []*model.Party) bool {
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	ATimesSShares := multiplicationProtocol(parties, triplesStep2, dShares, eShares, s, t, t, t)
+	ATimesSShares := multiplicationProtocol(parties, triplesStep2, dShares, eShares)
 
 	// Compute [T] = [R] * [A * S]
 	dShares = make([][][]byte, len(parties))
@@ -46,7 +46,7 @@ func computeT(parties []*model.Party) bool {
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	TShares := multiplicationProtocol(parties, triplesStep3, dShares, eShares, s, s, s, t)
+	TShares := multiplicationProtocol(parties, triplesStep3, dShares, eShares)
 
 	// Open T and check rank
 	T := algo.openMatrix(TShares)
@@ -62,7 +62,7 @@ func computeAInverse(parties []*model.Party) {
 	s := len(parties[0].A)
 	t := len(parties[0].A[0])
 
-	triple := GenerateMultiplicationTriple(len(parties), t, s, s, s)
+	triple := GenerateMultiplicationTriple(t, s, s, s)
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 
@@ -80,7 +80,7 @@ func computeAInverse(parties []*model.Party) {
 	}
 
 	// Open d, e and compute locally
-	zShares := multiplicationProtocol(parties, triple, dShares, eShares, t, s, s, s)
+	zShares := multiplicationProtocol(parties, triple, dShares, eShares)
 	for partyNumber, party := range parties {
 		party.AInverse = zShares[partyNumber]
 	}
@@ -107,8 +107,8 @@ func computeLittleX(parties []*model.Party) {
 		party.Z = z
 	}
 
-	triplesStep7 := GenerateMultiplicationTriple(len(parties), t, s, s, 1)
-	triplesStep8 := GenerateMultiplicationTriple(len(parties), t, t, t, 1)
+	triplesStep7 := GenerateMultiplicationTriple(t, s, s, 1)
+	triplesStep8 := GenerateMultiplicationTriple(t, t, t, 1)
 
 	// Compute [A^-1] * [b]
 	dShares := make([][][]byte, len(parties))
@@ -122,7 +122,7 @@ func computeLittleX(parties []*model.Party) {
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	AInvTimesB := multiplicationProtocol(parties, triplesStep7, dShares, eShares, t, s, s, 1)
+	AInvTimesB := multiplicationProtocol(parties, triplesStep7, dShares, eShares)
 
 	// Compute [S] * [z]
 	dShares = make([][][]byte, len(parties))
@@ -136,7 +136,7 @@ func computeLittleX(parties []*model.Party) {
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	STimesZ := multiplicationProtocol(parties, triplesStep8, dShares, eShares, t, t, t, 1)
+	STimesZ := multiplicationProtocol(parties, triplesStep8, dShares, eShares)
 
 	// [x] = [A^-1] * [b] + [S] * [z]
 	for i, party := range parties {

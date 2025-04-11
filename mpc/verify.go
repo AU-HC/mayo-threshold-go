@@ -14,7 +14,7 @@ func ThresholdVerify(parties []*model.Party, signature model.ThresholdSignature)
 	P := calculateP(p.Epk.P1, p.Epk.P2, p.Epk.P3)
 
 	for i := 0; i < m; i++ {
-		triple := GenerateMultiplicationTriple(len(parties), k, n, n, k)
+		triple := GenerateMultiplicationTriple(k, n, n, k)
 		dShares := make([][][]byte, len(parties))
 		eShares := make([][][]byte, len(parties))
 
@@ -30,7 +30,7 @@ func ThresholdVerify(parties []*model.Party, signature model.ThresholdSignature)
 			eShares[partyNumber] = ei
 		}
 
-		YShares := multiplicationProtocol(parties, triple, dShares, eShares, k, n, n, k)
+		YShares := multiplicationProtocol(parties, triple, dShares, eShares)
 
 		for partyNumber, party := range parties {
 			party.Y[i] = YShares[partyNumber]

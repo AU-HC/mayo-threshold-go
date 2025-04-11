@@ -7,15 +7,15 @@ import (
 	"reflect"
 )
 
-func GenerateMultiplicationTriples(n, r1, c1, r2, c2, amount int) []model.Triple {
+func GenerateMultiplicationTriples(r1, c1, r2, c2, amount int) []model.Triple {
 	triples := make([]model.Triple, amount)
 	for i := 0; i < amount; i++ {
-		triples[i] = GenerateMultiplicationTriple(n, r1, c1, r2, c2)
+		triples[i] = GenerateMultiplicationTriple(r1, c1, r2, c2)
 	}
 	return triples
 }
 
-func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
+func GenerateMultiplicationTriple(r1, c1, r2, c2 int) model.Triple {
 	if c1 != r2 {
 		panic(fmt.Errorf("dimensions not suitable for matrix multiplication"))
 	}
@@ -43,7 +43,7 @@ func GenerateMultiplicationTriple(n, r1, c1, r2, c2 int) model.Triple {
 	}
 }
 
-func multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares, eShares [][][]byte, dRow, dCol, eRow, eCol int) [][][]byte {
+func multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares, eShares [][][]byte) [][][]byte {
 	zShares := make([][][]byte, len(parties))
 
 	d := algo.openMatrix(dShares)

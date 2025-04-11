@@ -6,10 +6,10 @@ import (
 	"reflect"
 )
 
-func computeM(parties []*model.Party, message []byte) {
+func (c *Context) computeM(parties []*model.Party, message []byte) {
 	salt := rand.Coin(parties, lambda)
 	t := rand.Shake256(m, message, salt)
-	triples := GenerateMultiplicationTriples(k, v, v, o, m) // V: k x v, Li: v x o
+	triples := c.GenerateMultiplicationTriples(k, v, v, o, m) // V: k x v, Li: v x o
 
 	for _, party := range parties {
 		V := rand.Matrix(k, v)
@@ -24,7 +24,7 @@ func computeM(parties []*model.Party, message []byte) {
 	for i, party := range parties {
 		VShares[i] = party.V
 	}
-	VOpen := algo.openMatrix(VShares)
+	VOpen := c.algo.openMatrix(VShares)
 
 	for i := 0; i < m; i++ {
 		dShares := make([][][]byte, len(parties))
@@ -44,7 +44,7 @@ func computeM(parties []*model.Party, message []byte) {
 		}
 
 		// Open d, e and compute locally
-		zShares := multiplicationProtocol(parties, triples[i], dShares, eShares)
+		zShares := c.multiplicationProtocol(parties, triples[i], dShares, eShares)
 		for partyNumber, party := range parties {
 			party.M[i] = zShares[partyNumber]
 		}
@@ -56,8 +56,8 @@ func computeM(parties []*model.Party, message []byte) {
 			MShares[partyNumber] = party.M[i]
 			LShares[partyNumber] = party.EskShare.L[i]
 		}
-		MOpen := algo.openMatrix(MShares)
-		LOpen := algo.openMatrix(LShares)
+		MOpen := c.algo.openMatrix(MShares)
+		LOpen := c.algo.openMatrix(LShares)
 
 		if !reflect.DeepEqual(MOpen, MultiplyMatrices(VOpen, LOpen)) {
 			panic("M is not equal to V * L")
@@ -66,8 +66,8 @@ func computeM(parties []*model.Party, message []byte) {
 	}
 }
 
-func computeY(parties []*model.Party) {
-	triples := GenerateMultiplicationTriples(k, v, v, k, m) // V*P_1: k * v, V^T: v x k
+func (c *Context) computeY(parties []*model.Party) {
+	triples := c.GenerateMultiplicationTriples(k, v, v, k, m) // V*P_1: k * v, V^T: v x k
 	for i := 0; i < m; i++ {
 		dShares := make([][][]byte, len(parties))
 		eShares := make([][][]byte, len(parties))
@@ -84,7 +84,7 @@ func computeY(parties []*model.Party) {
 		}
 
 		// Open d, e and compute locally
-		zShares := multiplicationProtocol(parties, triples[i], dShares, eShares)
+		zShares := c.multiplicationProtocol(parties, triples[i], dShares, eShares)
 		for partyNumber, party := range parties {
 			party.Y[i] = zShares[partyNumber]
 		}
@@ -94,7 +94,7 @@ func computeY(parties []*model.Party) {
 		for partyNumber, party := range parties {
 			YShares[partyNumber] = party.Y[i]
 		}
-		YOpen := algo.openMatrix(YShares)
+		YOpen := c.algo.openMatrix(YShares)
 		if !reflect.DeepEqual(YOpen, MultiplyMatrices(MultiplyMatrices(parties[0].VReconstructed,
 			parties[0].Epk.P1[i]), MatrixTranspose(parties[0].VReconstructed))) {
 			panic("Y is not equal to V * P1 * V^T")
@@ -103,7 +103,7 @@ func computeY(parties []*model.Party) {
 	}
 }
 
-func localComputeA(parties []*model.Party) {
+func (c *Context) localComputeA(parties []*model.Party) {
 	for _, party := range parties {
 		A := generateZeroMatrix(m+shifts, k*o)
 		ell := 0
@@ -141,7 +141,7 @@ func localComputeA(parties []*model.Party) {
 	}
 }
 
-func localComputeY(parties []*model.Party) {
+func (c *Context) localComputeY(parties []*model.Party) {
 	for partyNumber, party := range parties {
 		y := make([]byte, m+shifts)
 		ell := 0
@@ -168,7 +168,7 @@ func localComputeY(parties []*model.Party) {
 		}
 
 		y = reduceVecModF(y)
-		if algo.shouldPartyAddConstantShare(partyNumber) {
+		if c.algo.shouldPartyAddConstantShare(partyNumber) {
 			t := party.LittleT
 			for i := 0; i < m; i++ {
 				y[i] ^= t[i]
@@ -178,9 +178,9 @@ func localComputeY(parties []*model.Party) {
 	}
 }
 
-func computeSignature(parties []*model.Party) model.ThresholdSignature {
+func (c *Context) computeSignature(parties []*model.Party) model.ThresholdSignature {
 	// [X * O^T] = [X] * [O^t]
-	triple := GenerateMultiplicationTriple(k, o, o, v)
+	triple := c.GenerateMultiplicationTriple(k, o, o, v)
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
@@ -196,10 +196,10 @@ func computeSignature(parties []*model.Party) model.ThresholdSignature {
 	}
 
 	// Open d, e and compute locally
-	xTimesOTransposedShares := multiplicationProtocol(parties, triple, dShares, eShares)
+	xTimesOTransposedShares := c.multiplicationProtocol(parties, triple, dShares, eShares)
 
 	// CHECK FOR CORRECTNESS
-	xTimesOTransposedOpen := algo.openMatrix(xTimesOTransposedShares)
+	xTimesOTransposedOpen := c.algo.openMatrix(xTimesOTransposedShares)
 	XShares := make([][][]byte, len(parties))
 	OShares := make([][][]byte, len(parties))
 	VShares := make([][][]byte, len(parties))
@@ -208,9 +208,9 @@ func computeSignature(parties []*model.Party) model.ThresholdSignature {
 		OShares[partyNumber] = party.EskShare.O
 		VShares[partyNumber] = party.V
 	}
-	XOpen := algo.openMatrix(XShares)
-	OOpen := algo.openMatrix(OShares)
-	VOpen := algo.openMatrix(VShares)
+	XOpen := c.algo.openMatrix(XShares)
+	OOpen := c.algo.openMatrix(OShares)
+	VOpen := c.algo.openMatrix(VShares)
 	if !reflect.DeepEqual(xTimesOTransposedOpen, MultiplyMatrices(XOpen, MatrixTranspose(OOpen))) {
 		panic("XO^T != X * O^T")
 	}
@@ -227,7 +227,7 @@ func computeSignature(parties []*model.Party) model.ThresholdSignature {
 	}
 
 	// Open S' and X
-	SPrimeOpen := algo.openMatrix(SPrimeShares)
+	SPrimeOpen := c.algo.openMatrix(SPrimeShares)
 
 	s := appendMatrixHorizontal(SPrimeOpen, XOpen)
 	for _, party := range parties {

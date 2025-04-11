@@ -28,21 +28,23 @@ func Benchmark(n int) (string, error) {
 
 	results := make([]Result, len(amountOfPartiesToBenchmark))
 	for i, amountOfParties := range amountOfPartiesToBenchmark {
+		context := CreateContext(amountOfParties, amountOfParties)
+
 		// Benchmark KeyGen
 		keyGenResults := make([]int64, n)
 		for j := 0; j < n; j++ {
 			before := time.Now()
-			KeyGen(amountOfParties)
+			context.KeyGen(amountOfParties)
 			duration := time.Since(before)
 			keyGenResults[j] = duration.Nanoseconds()
 		}
 
 		// Benchmark Sign
-		_, parties := KeyGen(amountOfParties)
+		_, parties := context.KeyGen(amountOfParties)
 		signResults := make([]int64, n)
 		for j := 0; j < n; j++ {
 			before := time.Now()
-			Sign(message, parties)
+			context.Sign(message, parties)
 			duration := time.Since(before)
 			signResults[j] = duration.Nanoseconds()
 		}

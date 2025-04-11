@@ -9,12 +9,12 @@ import (
 const Tau = 1
 
 // ThresholdVerify takes an 'secret shared' signature and checks if it is valid for the message under the public key
-func ThresholdVerify(parties []*model.Party, signature model.ThresholdSignature) bool {
+func (c *Context) ThresholdVerify(parties []*model.Party, signature model.ThresholdSignature) bool {
 	p := parties[0]
 	P := calculateP(p.Epk.P1, p.Epk.P2, p.Epk.P3)
 
 	for i := 0; i < m; i++ {
-		triple := GenerateMultiplicationTriple(k, n, n, k)
+		triple := c.GenerateMultiplicationTriple(k, n, n, k)
 		dShares := make([][][]byte, len(parties))
 		eShares := make([][][]byte, len(parties))
 
@@ -30,14 +30,14 @@ func ThresholdVerify(parties []*model.Party, signature model.ThresholdSignature)
 			eShares[partyNumber] = ei
 		}
 
-		YShares := multiplicationProtocol(parties, triple, dShares, eShares)
+		YShares := c.multiplicationProtocol(parties, triple, dShares, eShares)
 
 		for partyNumber, party := range parties {
 			party.Y[i] = YShares[partyNumber]
 		}
 	}
 
-	localComputeY(parties)
+	c.localComputeY(parties)
 	zShares := make([][]byte, len(parties))
 	for i, party := range parties {
 		zShares[i] = party.LittleY
@@ -62,7 +62,7 @@ func ThresholdVerify(parties []*model.Party, signature model.ThresholdSignature)
 }
 
 // Verify takes an 'opened' signature and checks if it is valid for the message under the public key
-func Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signature) bool {
+func (c *Context) Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signature) bool {
 	P := calculateP(epk.P1, epk.P2, epk.P3)
 	Y := make([][][]byte, m)
 	t := rand.Shake256(m, message, signature.Salt)
@@ -75,7 +75,7 @@ func Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signatu
 	// Create party, due to how code is structured
 	parties := make([]*model.Party, 1)
 	parties[0] = &model.Party{Y: Y, LittleT: t}
-	localComputeY(parties)
+	c.localComputeY(parties)
 
 	zero := make([]byte, m)
 	return bytes.Equal(parties[0].LittleY, zero)

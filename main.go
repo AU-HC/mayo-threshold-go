@@ -9,6 +9,7 @@ import (
 )
 
 const AmountOfParties = 4
+const Threshold = 4
 
 func main() {
 	// Get application flags
@@ -21,22 +22,23 @@ func main() {
 		return
 	}
 
-	// Define the message
+	// Define the message and the context
+	context := mpc.CreateContext(AmountOfParties, Threshold)
 	message := []byte("Hello, world!")
 
 	// Generate expanded public key, and shares of expanded secret key for the parties
 	before := time.Now()
-	epk, parties := mpc.KeyGen(AmountOfParties)
+	epk, parties := context.KeyGen(AmountOfParties)
 	fmt.Println(fmt.Sprintf("Key generation with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Threshold sign message
 	before = time.Now()
-	sig := mpc.Sign(message, parties)
+	sig := context.Sign(message, parties)
 	fmt.Println(fmt.Sprintf("Signing with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Verify message
 	before = time.Now()
-	valid := mpc.Verify(epk, message, sig)
+	valid := context.Verify(epk, message, sig)
 	fmt.Println(fmt.Sprintf("Verify took: %dms", time.Since(before).Milliseconds()))
 	if valid {
 		fmt.Println(fmt.Sprintf("Signature: '%s' is a valid signature on the message: '%s'",

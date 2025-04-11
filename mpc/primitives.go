@@ -7,33 +7,33 @@ import (
 	"reflect"
 )
 
-func GenerateMultiplicationTriples(r1, c1, r2, c2, amount int) []model.Triple {
+func (c *Context) GenerateMultiplicationTriples(r1, c1, r2, c2, amount int) []model.Triple {
 	triples := make([]model.Triple, amount)
 	for i := 0; i < amount; i++ {
-		triples[i] = GenerateMultiplicationTriple(r1, c1, r2, c2)
+		triples[i] = c.GenerateMultiplicationTriple(r1, c1, r2, c2)
 	}
 	return triples
 }
 
-func GenerateMultiplicationTriple(r1, c1, r2, c2 int) model.Triple {
+func (c *Context) GenerateMultiplicationTriple(r1, c1, r2, c2 int) model.Triple {
 	if c1 != r2 {
 		panic(fmt.Errorf("dimensions not suitable for matrix multiplication"))
 	}
 
-	a := rand.Matrix(r1, c1)
-	b := rand.Matrix(r2, c2)
-	c := MultiplyMatrices(a, b)
+	aMatrix := rand.Matrix(r1, c1)
+	bMatrix := rand.Matrix(r2, c2)
+	cMatrix := MultiplyMatrices(aMatrix, bMatrix)
 
-	aShares := algo.createSharesForMatrix(a)
-	bShares := algo.createSharesForMatrix(b)
-	cShares := algo.createSharesForMatrix(c)
+	aShares := c.algo.createSharesForMatrix(aMatrix)
+	bShares := c.algo.createSharesForMatrix(bMatrix)
+	cShares := c.algo.createSharesForMatrix(cMatrix)
 
-	// Reconstruct a, b, c
-	aReconstructed := algo.openMatrix(aShares)
-	bReconstructed := algo.openMatrix(bShares)
-	cReconstructed := algo.openMatrix(cShares)
+	// Reconstruct aMatrix, bMatrix, c
+	aReconstructed := c.algo.openMatrix(aShares)
+	bReconstructed := c.algo.openMatrix(bShares)
+	cReconstructed := c.algo.openMatrix(cShares)
 	if !reflect.DeepEqual(cReconstructed, MultiplyMatrices(aReconstructed, bReconstructed)) {
-		panic(fmt.Errorf("c is not the product of a and b"))
+		panic(fmt.Errorf("c is not the product of aMatrix and bMatrix"))
 	}
 
 	return model.Triple{
@@ -43,25 +43,25 @@ func GenerateMultiplicationTriple(r1, c1, r2, c2 int) model.Triple {
 	}
 }
 
-func multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares, eShares [][][]byte) [][][]byte {
+func (c *Context) multiplicationProtocol(parties []*model.Party, triple model.Triple, dShares, eShares [][][]byte) [][][]byte {
 	zShares := make([][][]byte, len(parties))
 
-	d := algo.openMatrix(dShares)
-	e := algo.openMatrix(eShares)
+	d := c.algo.openMatrix(dShares)
+	e := c.algo.openMatrix(eShares)
 
 	for partyNumber := range parties {
-		a := triple.A[partyNumber]
-		b := triple.B[partyNumber]
-		c := triple.C[partyNumber]
+		aTriple := triple.A[partyNumber]
+		bTriple := triple.B[partyNumber]
+		cTriple := triple.C[partyNumber]
 
-		db := MultiplyMatrices(d, b) // d * [b]
-		de := MultiplyMatrices(d, e) // d * e
-		ae := MultiplyMatrices(a, e) // [a] * e
-		AddMatrices(db, ae)          // d * [b] + [a] * e
-		AddMatrices(db, c)           // d * [b] + [a] * e + [c]
+		db := MultiplyMatrices(d, bTriple) // d * [bTriple]
+		de := MultiplyMatrices(d, e)       // d * e
+		ae := MultiplyMatrices(aTriple, e) // [aTriple] * e
+		AddMatrices(db, ae)                // d * [bTriple] + [aTriple] * e
+		AddMatrices(db, cTriple)           // d * [bTriple] + [aTriple] * e + [cTriple]
 
-		if algo.shouldPartyAddConstantShare(partyNumber) {
-			AddMatrices(db, de) // d * [b] + [a] * e + [c] + d * e
+		if c.algo.shouldPartyAddConstantShare(partyNumber) {
+			AddMatrices(db, de) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
 		}
 
 		zShares[partyNumber] = db

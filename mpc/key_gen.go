@@ -6,17 +6,15 @@ import (
 	"reflect"
 )
 
-var algo = Shamir{n: 4, t: 2}
-
-func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
+func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 	parties := make([]*model.Party, amountOfParties)
 	P1 := make([][][]byte, m)
 	P2 := make([][][]byte, m)
 	P3 := make([][][]byte, m)
-	OShares := algo.createSharesForRandomMatrix(v, o)
+	OShares := c.algo.createSharesForRandomMatrix(v, o)
 	LShares := make([][][][]byte, amountOfParties)
 
-	OReconstructed := algo.openMatrix(OShares) // FOR CORRECTNESS
+	OReconstructed := c.algo.openMatrix(OShares) // FOR CORRECTNESS
 
 	for i := 0; i < amountOfParties; i++ {
 		LShares[i] = make([][][]byte, m)
@@ -28,14 +26,14 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		P2[i] = rand.CoinMatrix(parties, v, o)
 	}
 
-	triplesStep4 := GenerateMultiplicationTriples(o, v, v, o, m)
+	triplesStep4 := c.GenerateMultiplicationTriples(o, v, v, o, m)
 	for i := 0; i < m; i++ {
 		// Compute [P1i * O]
 		P1iTimeOShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
 			P1iTimeOShares[partyNumber] = MultiplyMatrices(P1[i], OShares[partyNumber])
 		}
-		if !reflect.DeepEqual(algo.openMatrix(P1iTimeOShares), MultiplyMatrices(P1[i], OReconstructed)) {
+		if !reflect.DeepEqual(c.algo.openMatrix(P1iTimeOShares), MultiplyMatrices(P1[i], OReconstructed)) {
 			panic("incorrect computation")
 		}
 
@@ -47,7 +45,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 			bi := triplesStep4[i].B[partyNumber]
 			di := AddMatricesNew(MatrixTranspose(OShares[partyNumber]), ai)
 			var ei [][]byte
-			if algo.shouldPartyAddConstantShare(partyNumber) {
+			if c.algo.shouldPartyAddConstantShare(partyNumber) {
 				ei = AddMatricesNew(AddMatricesNew(P1iTimeOShares[partyNumber], P2[i]), bi)
 			} else {
 				ei = AddMatricesNew(P1iTimeOShares[partyNumber], bi)
@@ -56,10 +54,10 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
 		}
-		step4Shares := multiplicationProtocol(parties, triplesStep4[i], dShares, eShares)
+		step4Shares := c.multiplicationProtocol(parties, triplesStep4[i], dShares, eShares)
 
 		// CHECK FOR CORRECTNESS
-		Step4Reconstructed := algo.openMatrix(step4Shares)
+		Step4Reconstructed := c.algo.openMatrix(step4Shares)
 		if !reflect.DeepEqual(Step4Reconstructed, MultiplyMatrices(MatrixTranspose(OReconstructed), AddMatricesNew(MultiplyMatrices(P1[i], OReconstructed), P2[i]))) {
 			panic("Step4 is not equal to O^T * (P1i * O - P2i)")
 		}
@@ -72,13 +70,13 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		}
 
 		// Open P3
-		p3i := algo.openMatrix(P3iShares)
+		p3i := c.algo.openMatrix(P3iShares)
 		P3[i] = p3i
 
 		// Compute locally [(P1i + P1i^T) * OShares] + P2i
 		LiShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
-			if algo.shouldPartyAddConstantShare(partyNumber) {
+			if c.algo.shouldPartyAddConstantShare(partyNumber) {
 				LiShares[partyNumber] = AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber]), P2[i])
 			} else {
 				LiShares[partyNumber] = MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber])
@@ -90,7 +88,7 @@ func KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 		}
 
 		// CHECK FOR CORRECTNESS
-		Li := algo.openMatrix(LiShares)
+		Li := c.algo.openMatrix(LiShares)
 		if !reflect.DeepEqual(Li, AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OReconstructed), P2[i])) {
 			panic("Li is not equal to (P1i + P1i^T) * O + P2i")
 		}

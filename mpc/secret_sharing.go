@@ -45,7 +45,7 @@ func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) [][][]byte {
 
 	for r := 0; r < rows; r++ {
 		for c := 0; c < cols; c++ {
-			secretByte := secretMatrix[r][c] //rand.SampleFieldElement()
+			secretByte := secretMatrix[r][c]
 			byteShares := createShares(secretByte, s.n, s.t)
 
 			for partyNumber := 0; partyNumber < s.n; partyNumber++ {
@@ -92,7 +92,6 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) [][][]byte {
 		AddMatrices(sharesSum, share)
 	}
 
-	shares[a.n-1] = AddMatricesNew(secretMatrix, sharesSum)
 	return shares
 }
 

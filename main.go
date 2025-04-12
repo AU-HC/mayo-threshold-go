@@ -47,6 +47,8 @@ func main() {
 		fmt.Println(fmt.Sprintf("Signature: '%s' is not a valid signature on the message: '%s'",
 			hex.EncodeToString(sig.Bytes()), message))
 	}
+
+	mpc.Test()
 }
 
 func benchmark(n int) {

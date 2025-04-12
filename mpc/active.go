@@ -14,31 +14,15 @@ type MatrixShare struct {
 	shares, alphas, gammas [][]byte
 }
 
-func Test() {
-	parties := 3
-
-	// The dealer shares a value
-	secret := byte(2)
-	shares := generateSharesForElement(parties, secret)
-
-	// Opening the shares
-	var sPrime byte
-	for _, share := range shares {
-		sPrime ^= share.share
+func createEmptyMatrixShare(rows, cols int) MatrixShare {
+	return MatrixShare{
+		shares: generateZeroMatrix(rows, cols),
+		alphas: generateZeroMatrix(rows, cols),
+		gammas: generateZeroMatrix(rows, cols),
 	}
-
-	myShares := make([]byte, parties)
-	for i, share := range shares {
-		myShares[i] = share.gamma ^ gf16Mul(sPrime, share.alpha)
-	}
-
-	var myOpen byte
-	for _, share := range myShares {
-		myOpen ^= share
-	}
-
-	fmt.Println(fmt.Sprintf("secret: %d, my: %d", sPrime, myOpen))
 }
+
+var globalAlpha = byte(13)
 
 func generateSharesForElement(n int, secret byte) []Share {
 	shares := make([]byte, n)
@@ -59,13 +43,10 @@ func generateSharesForElement(n int, secret byte) []Share {
 		alphaSum ^= alpha
 	}
 	shares[n-1] = secret ^ sharesSum
-
-	alpha := rand.SampleFieldElement()
-	alphas[n-1] = alpha
-	alphaSum ^= alpha
+	alphas[n-1] = alphaSum ^ globalAlpha
 
 	// Gamma
-	alphaTimesSecret := field.Gf16Mul(alphaSum, secret)
+	alphaTimesSecret := field.Gf16Mul(globalAlpha, secret)
 	var gammaSum byte
 	for i := 0; i < n-1; i++ {
 		gamma := rand.SampleFieldElement()
@@ -138,6 +119,44 @@ func MultiplyMatricesElementWise(a, b [][]byte) [][]byte {
 	return out
 }
 
+func AddMatrixShares(A, B MatrixShare) MatrixShare {
+	rows, cols := len(A.shares), len(A.shares[0])
+	result := createEmptyMatrixShare(rows, cols)
+
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			result.shares[r][c] = A.shares[r][c] ^ B.shares[r][c]
+			result.alphas[r][c] = A.alphas[r][c]
+			result.gammas[r][c] = A.gammas[r][c] ^ B.gammas[r][c]
+		}
+	}
+
+	return result
+}
+
+func MulMatrixShareWithConstantLeft(A [][]byte, B MatrixShare) MatrixShare {
+	rows, cols := len(A), len(B.shares[0])
+	inner := len(A[0]) // number of columns in A = number of rows in B
+	result := createEmptyMatrixShare(rows, cols)
+
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			var shareSim, alphaSum, gammaSum byte
+			for k := 0; k < inner; k++ {
+				a := A[r][k]
+				shareSim ^= gf16Mul(a, B.shares[k][c])
+				alphaSum ^= gf16Mul(a, B.alphas[k][c])
+				gammaSum ^= gf16Mul(a, B.gammas[k][c])
+			}
+			result.shares[r][c] = shareSim
+			result.alphas[r][c] = alphaSum
+			result.gammas[r][c] = gammaSum
+		}
+	}
+
+	return result
+}
+
 func openMatrix(shares []MatrixShare) ([][]byte, error) {
 	parties, rows, cols := len(shares), len(shares[0].shares), len(shares[0].shares[0])
 
@@ -158,9 +177,7 @@ func openMatrix(shares []MatrixShare) ([][]byte, error) {
 	}
 
 	if !reflect.DeepEqual(zero, muOpen) {
-		fmt.Println("mu was not 0")
+		return sPrime, fmt.Errorf("mu was not 0")
 	}
-	fmt.Println(fmt.Sprintf("secret: %d, my: %d", sPrime, muOpen))
-
-	return sPrime, nil // TODO: check if mu is 0
+	return sPrime, nil
 }

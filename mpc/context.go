@@ -1,8 +1,13 @@
 package mpc
 
+import "go/types"
+
 type Context struct {
-	algo SecretSharingAlgo
-	f    *Field
+	algo          SecretSharingAlgo
+	f             *Field
+	signTriples   PreprocessedMultiplicationSignTriples
+	keygenTriples PreprocessedMultiplicationKeyGenTriples
+	verifyTriples types.Nil // TODO: Add
 }
 
 func CreateContext(amountOfParties, t int) *Context {

@@ -10,7 +10,7 @@ import (
 const directory = "results"
 const fileName = "results.json"
 
-var amountOfPartiesToBenchmark = [6]int{2, 4, 8, 16, 32, 64}
+var amountOfPartiesToBenchmark = []int{2, 4, 8, 16, 32, 64}
 
 type Result struct {
 	AmountOfParties           int                       `json:"AmountOfParties"`
@@ -33,6 +33,7 @@ func Benchmark(n int) (string, error) {
 		// Benchmark KeyGen
 		keyGenResults := make([]int64, n)
 		for j := 0; j < n; j++ {
+			context.PreprocessMultiplicationKeyGenTriples()
 			before := time.Now()
 			context.KeyGen(amountOfParties)
 			duration := time.Since(before)
@@ -43,6 +44,7 @@ func Benchmark(n int) (string, error) {
 		_, parties := context.KeyGen(amountOfParties)
 		signResults := make([]int64, n)
 		for j := 0; j < n; j++ {
+			context.PreprocessMultiplicationSignTriples(AmountOfMultiplicationTriples)
 			before := time.Now()
 			context.Sign(message, parties)
 			duration := time.Since(before)

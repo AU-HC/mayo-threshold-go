@@ -6,6 +6,11 @@ import (
 	"reflect"
 )
 
+func (c *Context) KeyGenAPI(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
+	c.PreprocessMultiplicationKeyGenTriples()
+	return c.KeyGen(amountOfParties)
+}
+
 func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
 	parties := make([]*model.Party, amountOfParties)
 	P1 := make([][][]byte, m)
@@ -26,7 +31,6 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 		P2[i] = rand.CoinMatrix(parties, v, o)
 	}
 
-	triplesStep4 := c.GenerateMultiplicationTriples(o, v, v, o, m)
 	for i := 0; i < m; i++ {
 		// Compute [P1i * O]
 		P1iTimeOShares := make([][][]byte, amountOfParties)
@@ -41,8 +45,8 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 		dShares := make([][][]byte, len(parties))
 		eShares := make([][][]byte, len(parties))
 		for partyNumber, _ := range parties {
-			ai := triplesStep4[i].A[partyNumber]
-			bi := triplesStep4[i].B[partyNumber]
+			ai := c.keygenTriples.TriplesStep4[i].A[partyNumber]
+			bi := c.keygenTriples.TriplesStep4[i].B[partyNumber]
 			di := AddMatricesNew(MatrixTranspose(OShares[partyNumber]), ai)
 			var ei [][]byte
 			if c.algo.shouldPartyAddConstantShare(partyNumber) {
@@ -54,7 +58,7 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
 		}
-		step4Shares := c.multiplicationProtocol(parties, triplesStep4[i], dShares, eShares)
+		step4Shares := c.multiplicationProtocol(parties, c.keygenTriples.TriplesStep4[i], dShares, eShares)
 
 		// CHECK FOR CORRECTNESS
 		Step4Reconstructed := c.algo.openMatrix(step4Shares)

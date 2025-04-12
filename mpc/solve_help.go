@@ -7,11 +7,9 @@ import (
 	"reflect"
 )
 
-func (c *Context) computeT(parties []*model.Party) bool {
+func (c *Context) computeT(parties []*model.Party, iteration int) bool {
 	s := len(parties[0].A)
 	t := len(parties[0].A[0])
-	triplesStep2 := c.GenerateMultiplicationTriple(s, t, t, t)
-	triplesStep3 := c.GenerateMultiplicationTriple(s, s, s, t)
 
 	SShares := c.algo.createSharesForRandomMatrix(t, t)
 	RShares := c.algo.createSharesForRandomMatrix(s, s)
@@ -24,29 +22,29 @@ func (c *Context) computeT(parties []*model.Party) bool {
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		ai := triplesStep2.A[partyNumber]
-		bi := triplesStep2.B[partyNumber]
+		ai := c.signTriples.ComputeT1[iteration].A[partyNumber]
+		bi := c.signTriples.ComputeT1[iteration].B[partyNumber]
 		di := AddMatricesNew(party.A, ai)
 		ei := AddMatricesNew(party.S, bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	ATimesSShares := c.multiplicationProtocol(parties, triplesStep2, dShares, eShares)
+	ATimesSShares := c.multiplicationProtocol(parties, c.signTriples.ComputeT1[iteration], dShares, eShares)
 
 	// Compute [T] = [R] * [A * S]
 	dShares = make([][][]byte, len(parties))
 	eShares = make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		ai := triplesStep3.A[partyNumber]
-		bi := triplesStep3.B[partyNumber]
+		ai := c.signTriples.ComputeT2[iteration].A[partyNumber]
+		bi := c.signTriples.ComputeT2[iteration].B[partyNumber]
 		di := AddMatricesNew(party.R, ai)
 		ei := AddMatricesNew(ATimesSShares[partyNumber], bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	TShares := c.multiplicationProtocol(parties, triplesStep3, dShares, eShares)
+	TShares := c.multiplicationProtocol(parties, c.signTriples.ComputeT2[iteration], dShares, eShares)
 
 	// Open T and check rank
 	T := c.algo.openMatrix(TShares)
@@ -59,17 +57,13 @@ func (c *Context) computeT(parties []*model.Party) bool {
 }
 
 func (c *Context) computeAInverse(parties []*model.Party) {
-	s := len(parties[0].A)
-	t := len(parties[0].A[0])
-
-	triple := c.GenerateMultiplicationTriple(t, s, s, s)
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 
 	// Compute locally
 	for partyNumber, party := range parties {
-		ai := triple.A[partyNumber]
-		bi := triple.B[partyNumber]
+		ai := c.signTriples.ComputeAInverse.A[partyNumber]
+		bi := c.signTriples.ComputeAInverse.B[partyNumber]
 		TInverse := computeRightInverse(party.T)
 
 		di := AddMatricesNew(MultiplyMatrices(party.S, TInverse), ai)
@@ -80,7 +74,7 @@ func (c *Context) computeAInverse(parties []*model.Party) {
 	}
 
 	// Open d, e and compute locally
-	zShares := c.multiplicationProtocol(parties, triple, dShares, eShares)
+	zShares := c.multiplicationProtocol(parties, c.signTriples.ComputeAInverse, dShares, eShares)
 	for partyNumber, party := range parties {
 		party.AInverse = zShares[partyNumber]
 	}
@@ -107,36 +101,33 @@ func (c *Context) computeLittleX(parties []*model.Party) {
 		party.Z = z
 	}
 
-	triplesStep7 := c.GenerateMultiplicationTriple(t, s, s, 1)
-	triplesStep8 := c.GenerateMultiplicationTriple(t, t, t, 1)
-
 	// Compute [A^-1] * [b]
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		ai := triplesStep7.A[partyNumber]
-		bi := triplesStep7.B[partyNumber]
+		ai := c.signTriples.ComputeX1.A[partyNumber]
+		bi := c.signTriples.ComputeX1.B[partyNumber]
 		di := AddMatricesNew(party.AInverse, ai)
 		ei := AddMatricesNew(vectorToMatrix(party.LittleY), bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	AInvTimesB := c.multiplicationProtocol(parties, triplesStep7, dShares, eShares)
+	AInvTimesB := c.multiplicationProtocol(parties, c.signTriples.ComputeX1, dShares, eShares)
 
 	// Compute [S] * [z]
 	dShares = make([][][]byte, len(parties))
 	eShares = make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
-		ai := triplesStep8.A[partyNumber]
-		bi := triplesStep8.B[partyNumber]
+		ai := c.signTriples.ComputeX2.A[partyNumber]
+		bi := c.signTriples.ComputeX2.B[partyNumber]
 		di := AddMatricesNew(party.S, ai)
 		ei := AddMatricesNew(vectorToMatrix(party.Z), bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	STimesZ := c.multiplicationProtocol(parties, triplesStep8, dShares, eShares)
+	STimesZ := c.multiplicationProtocol(parties, c.signTriples.ComputeX2, dShares, eShares)
 
 	// [x] = [A^-1] * [b] + [S] * [z]
 	for i, party := range parties {

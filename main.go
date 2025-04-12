@@ -28,12 +28,12 @@ func main() {
 
 	// Generate expanded public key, and shares of expanded secret key for the parties
 	before := time.Now()
-	epk, parties := context.KeyGen(AmountOfParties)
+	epk, parties := context.KeyGenAPI(AmountOfParties)
 	fmt.Println(fmt.Sprintf("Key generation with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Threshold sign message
 	before = time.Now()
-	sig := context.Sign(message, parties)
+	sig := context.SignAPI(message, parties)
 	fmt.Println(fmt.Sprintf("Signing with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Verify message

@@ -6,10 +6,9 @@ import (
 	"reflect"
 )
 
-func (c *Context) computeM(parties []*model.Party, message []byte) {
+func (c *Context) computeM(parties []*model.Party, message []byte, iteration int) {
 	salt := rand.Coin(parties, lambda)
 	t := rand.Shake256(m, message, salt)
-	triples := c.GenerateMultiplicationTriples(k, v, v, o, m) // V: k x v, Li: v x o
 
 	for _, party := range parties {
 		V := rand.Matrix(k, v)
@@ -32,8 +31,8 @@ func (c *Context) computeM(parties []*model.Party, message []byte) {
 
 		// Compute locally
 		for partyNumber, party := range parties {
-			ai := triples[i].A[partyNumber]
-			bi := triples[i].B[partyNumber]
+			ai := c.signTriples.ComputeM[iteration][i].A[partyNumber]
+			bi := c.signTriples.ComputeM[iteration][i].B[partyNumber]
 			di := AddMatricesNew(party.V, ai)
 			ei := AddMatricesNew(party.EskShare.L[i], bi)
 
@@ -44,7 +43,7 @@ func (c *Context) computeM(parties []*model.Party, message []byte) {
 		}
 
 		// Open d, e and compute locally
-		zShares := c.multiplicationProtocol(parties, triples[i], dShares, eShares)
+		zShares := c.multiplicationProtocol(parties, c.signTriples.ComputeM[iteration][i], dShares, eShares)
 		for partyNumber, party := range parties {
 			party.M[i] = zShares[partyNumber]
 		}
@@ -66,16 +65,15 @@ func (c *Context) computeM(parties []*model.Party, message []byte) {
 	}
 }
 
-func (c *Context) computeY(parties []*model.Party) {
-	triples := c.GenerateMultiplicationTriples(k, v, v, k, m) // V*P_1: k * v, V^T: v x k
+func (c *Context) computeY(parties []*model.Party, iteration int) {
 	for i := 0; i < m; i++ {
 		dShares := make([][][]byte, len(parties))
 		eShares := make([][][]byte, len(parties))
 
 		// Compute locally
 		for partyNumber, party := range parties {
-			ai := triples[i].A[partyNumber]
-			bi := triples[i].B[partyNumber]
+			ai := c.signTriples.ComputeY[iteration][i].A[partyNumber]
+			bi := c.signTriples.ComputeY[iteration][i].B[partyNumber]
 			di := AddMatricesNew(MultiplyMatrices(party.V, party.Epk.P1[i]), ai)
 			ei := AddMatricesNew(MatrixTranspose(party.V), bi)
 
@@ -84,7 +82,7 @@ func (c *Context) computeY(parties []*model.Party) {
 		}
 
 		// Open d, e and compute locally
-		zShares := c.multiplicationProtocol(parties, triples[i], dShares, eShares)
+		zShares := c.multiplicationProtocol(parties, c.signTriples.ComputeY[iteration][i], dShares, eShares)
 		for partyNumber, party := range parties {
 			party.Y[i] = zShares[partyNumber]
 		}
@@ -180,14 +178,13 @@ func (c *Context) localComputeY(parties []*model.Party) {
 
 func (c *Context) computeSignature(parties []*model.Party) model.ThresholdSignature {
 	// [X * O^T] = [X] * [O^t]
-	triple := c.GenerateMultiplicationTriple(k, o, o, v)
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
 		party.X = matrixify(party.LittleX, k, o)
 
-		ai := triple.A[partyNumber]
-		bi := triple.B[partyNumber]
+		ai := c.signTriples.ComputeSignature.A[partyNumber]
+		bi := c.signTriples.ComputeSignature.B[partyNumber]
 		di := AddMatricesNew(party.X, ai)
 		ei := AddMatricesNew(MatrixTranspose(party.EskShare.O), bi)
 
@@ -196,7 +193,7 @@ func (c *Context) computeSignature(parties []*model.Party) model.ThresholdSignat
 	}
 
 	// Open d, e and compute locally
-	xTimesOTransposedShares := c.multiplicationProtocol(parties, triple, dShares, eShares)
+	xTimesOTransposedShares := c.multiplicationProtocol(parties, c.signTriples.ComputeSignature, dShares, eShares)
 
 	// CHECK FOR CORRECTNESS
 	xTimesOTransposedOpen := c.algo.openMatrix(xTimesOTransposedShares)

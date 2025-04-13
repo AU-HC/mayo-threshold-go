@@ -16,10 +16,13 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 	P1 := make([][][]byte, m)
 	P2 := make([][][]byte, m)
 	P3 := make([][][]byte, m)
-	OShares := c.algo.createSharesForRandomMatrix(v, o)
+	OShares := createSharesForRandomMatrix(amountOfParties, v, o)
 	LShares := make([][][][]byte, amountOfParties)
 
-	OReconstructed := c.algo.openMatrix(OShares) // FOR CORRECTNESS
+	OReconstructed, err := c.algo.authenticatedOpenMatrix(OShares) // FOR CORRECTNESS
+	if err != nil {
+		panic(err)
+	}
 
 	for i := 0; i < amountOfParties; i++ {
 		LShares[i] = make([][][]byte, m)
@@ -35,7 +38,7 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 		// Compute [P1i * O]
 		P1iTimeOShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
-			P1iTimeOShares[partyNumber] = MultiplyMatrices(P1[i], OShares[partyNumber])
+			P1iTimeOShares[partyNumber] = MultiplyMatrices(P1[i], OShares[partyNumber].shares)
 		}
 		if !reflect.DeepEqual(c.algo.openMatrix(P1iTimeOShares), MultiplyMatrices(P1[i], OReconstructed)) {
 			panic("incorrect computation")
@@ -47,7 +50,7 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 		for partyNumber, _ := range parties {
 			ai := c.keygenTriples.TriplesStep4[i].A[partyNumber]
 			bi := c.keygenTriples.TriplesStep4[i].B[partyNumber]
-			di := AddMatricesNew(MatrixTranspose(OShares[partyNumber]), ai)
+			di := AddMatricesNew(MatrixTranspose(OShares[partyNumber].shares), ai)
 			var ei [][]byte
 			if c.algo.shouldPartyAddConstantShare(partyNumber) {
 				ei = AddMatricesNew(AddMatricesNew(P1iTimeOShares[partyNumber], P2[i]), bi)
@@ -81,9 +84,9 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 		LiShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
 			if c.algo.shouldPartyAddConstantShare(partyNumber) {
-				LiShares[partyNumber] = AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber]), P2[i])
+				LiShares[partyNumber] = AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber].shares), P2[i])
 			} else {
-				LiShares[partyNumber] = MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber])
+				LiShares[partyNumber] = MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber].shares)
 			}
 		}
 
@@ -108,7 +111,7 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 
 	// Set the epk and the esk shares
 	for partyNumber, _ := range parties {
-		eskShare := model.ExpandedSecretKey{P1: P1, L: LShares[partyNumber], O: OShares[partyNumber]}
+		eskShare := model.ExpandedSecretKey{P1: P1, L: LShares[partyNumber], O: OShares[partyNumber].shares}
 		party := &model.Party{EskShare: eskShare, Epk: epk}
 		parties[partyNumber] = party
 	}

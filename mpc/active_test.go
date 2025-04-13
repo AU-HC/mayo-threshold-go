@@ -45,6 +45,28 @@ func TestActiveAddMatrices(t *testing.T) {
 	}
 }
 
+func TestActiveAddMatricesWithConstant(t *testing.T) {
+	parties := 2
+	rows, cols := 3, 3
+	matrix1 := rand.Matrix(rows, cols)
+	matrix2 := rand.Matrix(rows, cols)
+	shares1 := createSharesForMatrix(parties, matrix1)
+
+	result := make([]MatrixShare, parties)
+	for i := 0; i < parties; i++ {
+		result[i] = AddMatrixWithConstant(matrix2, shares1[i], i)
+	}
+
+	actual, err := openMatrix(result)
+	expected := AddMatricesNew(matrix1, matrix2)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected %2d, but got %2d", expected, actual)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestActiveMulMatrixShareWithConstantLeft(t *testing.T) {
 	parties := 2
 	matrix1 := rand.Matrix(2, 3)
@@ -75,6 +97,48 @@ func TestActiveMulMatrixShareWithConstantLeftOtherDimension(t *testing.T) {
 	result := make([]MatrixShare, parties)
 	for i := 0; i < parties; i++ {
 		result[i] = MulMatrixShareWithConstantLeft(matrix1, shares2[i])
+	}
+
+	actual, err := openMatrix(result)
+	expected := MultiplyMatrices(matrix1, matrix2)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected %2d, but got %2d", expected, actual)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestActiveMulMatrixShareWithConstantRightOtherDimension(t *testing.T) {
+	parties := 2
+	matrix1 := rand.Matrix(2, 3)
+	matrix2 := rand.Matrix(3, 2)
+	shares1 := createSharesForMatrix(parties, matrix1)
+
+	result := make([]MatrixShare, parties)
+	for i := 0; i < parties; i++ {
+		result[i] = MulMatrixShareWithConstantRight(shares1[i], matrix2)
+	}
+
+	actual, err := openMatrix(result)
+	expected := MultiplyMatrices(matrix1, matrix2)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected %2d, but got %2d", expected, actual)
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestActiveMulMatrixShareWithConstantRight(t *testing.T) {
+	parties := 2
+	matrix1 := rand.Matrix(3, 2)
+	matrix2 := rand.Matrix(2, 3)
+	shares1 := createSharesForMatrix(parties, matrix1)
+
+	result := make([]MatrixShare, parties)
+	for i := 0; i < parties; i++ {
+		result[i] = MulMatrixShareWithConstantRight(shares1[i], matrix2)
 	}
 
 	actual, err := openMatrix(result)

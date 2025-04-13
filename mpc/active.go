@@ -120,40 +120,55 @@ func MultiplyMatricesElementWise(a, b [][]byte) [][]byte {
 }
 
 func AddMatrixShares(A, B MatrixShare) MatrixShare {
-	rows, cols := len(A.shares), len(A.shares[0])
-	result := createEmptyMatrixShare(rows, cols)
+	var result MatrixShare
+	result.shares = AddMatricesNew(A.shares, B.shares)
+	result.gammas = AddMatricesNew(A.gammas, B.gammas)
+	result.alphas = A.alphas
+	return result
+}
 
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			result.shares[r][c] = A.shares[r][c] ^ B.shares[r][c]
-			result.alphas[r][c] = A.alphas[r][c]
-			result.gammas[r][c] = A.gammas[r][c] ^ B.gammas[r][c]
-		}
+func AddMatrixWithConstant(A [][]byte, B MatrixShare, xd int) MatrixShare {
+	var result MatrixShare
+	if xd == 0 {
+		result.shares = AddMatricesNew(A, B.shares)
+		result.gammas = AddMatricesNew(B.gammas, MultiplyMatricesElementWise(A, B.alphas))
+		result.alphas = B.alphas
+	} else {
+		result.shares = B.shares
+		result.gammas = AddMatricesNew(B.gammas, MultiplyMatricesElementWise(A, B.alphas))
+		result.alphas = B.alphas
 	}
 
 	return result
 }
 
 func MulMatrixShareWithConstantLeft(A [][]byte, B MatrixShare) MatrixShare {
-	rows, cols := len(A), len(B.shares[0])
-	inner := len(A[0]) // number of columns in A = number of rows in B
-	result := createEmptyMatrixShare(rows, cols)
-
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			var shareSim, alphaSum, gammaSum byte
-			for k := 0; k < inner; k++ {
-				a := A[r][k]
-				shareSim ^= gf16Mul(a, B.shares[k][c])
-				alphaSum ^= gf16Mul(a, B.alphas[k][c])
-				gammaSum ^= gf16Mul(a, B.gammas[k][c])
-			}
-			result.shares[r][c] = shareSim
-			result.alphas[r][c] = alphaSum
-			result.gammas[r][c] = gammaSum
+	var result MatrixShare
+	result.shares = MultiplyMatrices(A, B.shares)
+	result.gammas = MultiplyMatrices(A, B.gammas)
+	result.alphas = make([][]byte, len(result.shares))
+	for r := 0; r < len(result.shares); r++ {
+		row := make([]byte, len(result.shares))
+		for c := 0; c < len(result.shares[0]); c++ {
+			row[c] = B.alphas[0][0]
 		}
+		result.alphas[r] = row
 	}
+	return result
+}
 
+func MulMatrixShareWithConstantRight(A MatrixShare, B [][]byte) MatrixShare {
+	var result MatrixShare
+	result.shares = MultiplyMatrices(A.shares, B)
+	result.gammas = MultiplyMatrices(A.gammas, B)
+	result.alphas = make([][]byte, len(result.shares))
+	for r := 0; r < len(result.shares); r++ {
+		row := make([]byte, len(result.shares[0]))
+		for c := 0; c < len(result.shares[0]); c++ {
+			row[c] = A.alphas[0][0]
+		}
+		result.alphas[r] = row
+	}
 	return result
 }
 

@@ -4,6 +4,7 @@ import "mayo-threshold-go/rand"
 
 type SecretSharingAlgo interface {
 	openMatrix(shares [][][]byte) [][]byte
+	authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	createSharesForMatrix([][]byte) [][][]byte
 	createSharesForRandomMatrix(rows, cols int) [][][]byte
 	shouldPartyAddConstantShare(partyNumber int) bool
@@ -11,6 +12,11 @@ type SecretSharingAlgo interface {
 
 type Shamir struct {
 	n, t int
+}
+
+func (s *Shamir) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *Shamir) openMatrix(shares [][][]byte) [][]byte {
@@ -70,6 +76,10 @@ type Additive struct {
 	n int
 }
 
+func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error) {
+	return openMatrix(shares)
+}
+
 func (a *Additive) openMatrix(shares [][][]byte) [][]byte {
 	rows, cols := len(shares[0]), len(shares[0][0])
 	result := generateZeroMatrix(rows, cols)
@@ -91,6 +101,7 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) [][][]byte {
 		shares[i] = share
 		AddMatrices(sharesSum, share)
 	}
+	shares[a.n-1] = AddMatricesNew(sharesSum, secretMatrix)
 
 	return shares
 }

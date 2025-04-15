@@ -1,22 +1,23 @@
 package mpc
 
 type Party struct {
-	EskShare          ExpandedSecretKey
-	Epk               ExpandedPublicKey
-	Salt              []byte
-	LittleT           []byte
-	LittleX           []byte
-	LittleY           []byte
-	Z                 []byte
-	T                 [][]byte
-	V, VReconstructed [][]byte
-	A                 [][]byte
-	AInverse          [][]byte
-	R                 [][]byte
-	S                 [][]byte
-	SPrime            [][]byte
-	X                 [][]byte
-	Signature         [][]byte
-	M                 [][][]byte
-	Y                 [][][]byte
+	EskShare       ExpandedSecretKey
+	Epk            ExpandedPublicKey
+	Salt           []byte
+	LittleT        []byte
+	LittleX        []byte
+	LittleY        []byte
+	Z              []byte
+	T              [][]byte
+	V              MatrixShare
+	VReconstructed [][]byte
+	A              MatrixShare
+	AInverse       MatrixShare
+	R              MatrixShare
+	S              MatrixShare
+	SPrime         MatrixShare
+	X              MatrixShare
+	Signature      [][]byte
+	M              []MatrixShare
+	Y              []MatrixShare
 }

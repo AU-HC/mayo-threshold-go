@@ -204,3 +204,23 @@ func openMatrix(shares []MatrixShare) ([][]byte, error) {
 	}
 	return sPrime, nil
 }
+
+func vectorToMatrixActive(x []byte) MatrixShare {
+	result := make([][]byte, len(x))
+
+	for i, elem := range x {
+		result[i] = []byte{elem}
+	}
+
+	return result
+}
+
+func matrixToVecActive(A MatrixShare) []byte {
+	result := make([]byte, len(A.shares))
+
+	for index, elem := range A.shares {
+		result[index] = elem[0]
+	}
+
+	return result
+}

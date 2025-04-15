@@ -1,34 +1,34 @@
 package mpc
 
 type PreprocessedMultiplicationSignTriples struct {
-	ComputeM         [][]Triple
-	ComputeY         [][]Triple
-	ComputeT1        []Triple
-	ComputeT2        []Triple
-	ComputeAInverse  Triple
-	ComputeX1        Triple
-	ComputeX2        Triple
-	ComputeSignature Triple
+	ComputeM         [][]ActiveTriple
+	ComputeY         [][]ActiveTriple
+	ComputeT1        []ActiveTriple
+	ComputeT2        []ActiveTriple
+	ComputeAInverse  ActiveTriple
+	ComputeX1        ActiveTriple
+	ComputeX2        ActiveTriple
+	ComputeSignature ActiveTriple
 }
 
 func (c *Context) PreprocessMultiplicationSignTriples(amountOfTries int) {
-	mTriples := make([][]Triple, amountOfTries)
-	yTriples := make([][]Triple, amountOfTries)
+	mTriples := make([][]ActiveTriple, amountOfTries)
+	yTriples := make([][]ActiveTriple, amountOfTries)
 	for i := 0; i < amountOfTries; i++ {
-		mTriples[i] = c.GenerateMultiplicationTriples(k, v, v, o, m)
-		yTriples[i] = c.GenerateMultiplicationTriples(k, v, v, k, m)
+		mTriples[i] = c.GenerateMultiplicationActiveTriples(k, v, v, o, m)
+		yTriples[i] = c.GenerateMultiplicationActiveTriples(k, v, v, k, m)
 	}
 
 	s, t := m, k*o
 	c.signTriples = PreprocessedMultiplicationSignTriples{
 		ComputeM:         mTriples,
 		ComputeY:         yTriples,
-		ComputeT1:        c.GenerateMultiplicationTriples(s, t, t, t, amountOfTries),
-		ComputeT2:        c.GenerateMultiplicationTriples(s, s, s, t, amountOfTries),
-		ComputeAInverse:  c.GenerateMultiplicationTriple(t, s, s, s),
-		ComputeX1:        c.GenerateMultiplicationTriple(t, s, s, 1),
-		ComputeX2:        c.GenerateMultiplicationTriple(t, t, t, 1),
-		ComputeSignature: c.GenerateMultiplicationTriple(k, o, o, v),
+		ComputeT1:        c.GenerateMultiplicationActiveTriples(s, t, t, t, amountOfTries),
+		ComputeT2:        c.GenerateMultiplicationActiveTriples(s, s, s, t, amountOfTries),
+		ComputeAInverse:  c.GenerateMultiplicationActiveTriple(t, s, s, s),
+		ComputeX1:        c.GenerateMultiplicationActiveTriple(t, s, s, 1),
+		ComputeX2:        c.GenerateMultiplicationActiveTriple(t, t, t, 1),
+		ComputeSignature: c.GenerateMultiplicationActiveTriple(k, o, o, v),
 	}
 }
 

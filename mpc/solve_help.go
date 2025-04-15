@@ -7,46 +7,49 @@ import (
 )
 
 func (c *Context) computeT(parties []*Party, iteration int) bool {
-	s := len(parties[0].A)
-	t := len(parties[0].A[0])
+	s := len(parties[0].A.shares)
+	t := len(parties[0].A.shares[0])
 
-	SShares := c.algo.createSharesForRandomMatrix(t, t)
-	RShares := c.algo.createSharesForRandomMatrix(s, s)
+	SShares := createSharesForRandomMatrix(len(parties), t, t)
+	RShares := createSharesForRandomMatrix(len(parties), s, s)
 	for partyNumber, party := range parties {
 		party.S = SShares[partyNumber]
 		party.R = RShares[partyNumber]
 	}
 
 	// Compute [A * S] = [A] * [S]
-	dShares := make([][][]byte, len(parties))
-	eShares := make([][][]byte, len(parties))
+	dShares := make([]MatrixShare, len(parties))
+	eShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		ai := c.signTriples.ComputeT1[iteration].A[partyNumber]
 		bi := c.signTriples.ComputeT1[iteration].B[partyNumber]
-		di := AddMatricesNew(party.A, ai)
-		ei := AddMatricesNew(party.S, bi)
+		di := AddMatrixShares(party.A, ai)
+		ei := AddMatrixShares(party.S, bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	ATimesSShares := c.multiplicationProtocol(parties, c.signTriples.ComputeT1[iteration], dShares, eShares)
+	ATimesSShares := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeT1[iteration], dShares, eShares)
 
 	// Compute [T] = [R] * [A * S]
-	dShares = make([][][]byte, len(parties))
-	eShares = make([][][]byte, len(parties))
+	dShares = make([]MatrixShare, len(parties))
+	eShares = make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		ai := c.signTriples.ComputeT2[iteration].A[partyNumber]
 		bi := c.signTriples.ComputeT2[iteration].B[partyNumber]
-		di := AddMatricesNew(party.R, ai)
-		ei := AddMatricesNew(ATimesSShares[partyNumber], bi)
+		di := AddMatrixShares(party.R, ai)
+		ei := AddMatrixShares(ATimesSShares[partyNumber], bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	TShares := c.multiplicationProtocol(parties, c.signTriples.ComputeT2[iteration], dShares, eShares)
+	TShares := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeT2[iteration], dShares, eShares)
 
 	// Open T and check rank
-	T := c.algo.openMatrix(TShares)
+	T, err := c.algo.authenticatedOpenMatrix(TShares)
+	if err != nil {
+		panic(err)
+	}
 
 	for _, party := range parties {
 		party.T = T
@@ -56,8 +59,8 @@ func (c *Context) computeT(parties []*Party, iteration int) bool {
 }
 
 func (c *Context) computeAInverse(parties []*Party) {
-	dShares := make([][][]byte, len(parties))
-	eShares := make([][][]byte, len(parties))
+	dShares := make([]MatrixShare, len(parties))
+	eShares := make([]MatrixShare, len(parties))
 
 	// Compute locally
 	for partyNumber, party := range parties {
@@ -65,23 +68,23 @@ func (c *Context) computeAInverse(parties []*Party) {
 		bi := c.signTriples.ComputeAInverse.B[partyNumber]
 		TInverse := computeRightInverse(party.T)
 
-		di := AddMatricesNew(MultiplyMatrices(party.S, TInverse), ai)
-		ei := AddMatricesNew(party.R, bi)
+		di := AddMatrixShares(MulPublicRight(party.S, TInverse), ai)
+		ei := AddMatrixShares(party.R, bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
 
 	// Open d, e and compute locally
-	zShares := c.multiplicationProtocol(parties, c.signTriples.ComputeAInverse, dShares, eShares)
+	zShares := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeAInverse, dShares, eShares)
 	for partyNumber, party := range parties {
 		party.AInverse = zShares[partyNumber]
 	}
 }
 
 func (c *Context) computeLittleX(parties []*Party) {
-	s := len(parties[0].A)
-	t := len(parties[0].A[0])
+	s := len(parties[0].A.shares)
+	t := len(parties[0].A.shares[0])
 
 	basis := computeBasisOfKernel(parties[0].T)
 
@@ -101,51 +104,61 @@ func (c *Context) computeLittleX(parties []*Party) {
 	}
 
 	// Compute [A^-1] * [b]
-	dShares := make([][][]byte, len(parties))
-	eShares := make([][][]byte, len(parties))
+	dShares := make([]MatrixShare, len(parties))
+	eShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		ai := c.signTriples.ComputeX1.A[partyNumber]
 		bi := c.signTriples.ComputeX1.B[partyNumber]
-		di := AddMatricesNew(party.AInverse, ai)
-		ei := AddMatricesNew(vectorToMatrix(party.LittleY), bi)
+		di := AddMatrixShares(party.AInverse, ai)
+		ei := AddMatrixShares(vectorToMatrix(party.LittleY), bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	AInvTimesB := c.multiplicationProtocol(parties, c.signTriples.ComputeX1, dShares, eShares)
+	AInvTimesB := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeX1, dShares, eShares)
 
 	// Compute [S] * [z]
-	dShares = make([][][]byte, len(parties))
-	eShares = make([][][]byte, len(parties))
+	dShares = make([]MatrixShare, len(parties))
+	eShares = make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		ai := c.signTriples.ComputeX2.A[partyNumber]
 		bi := c.signTriples.ComputeX2.B[partyNumber]
-		di := AddMatricesNew(party.S, ai)
-		ei := AddMatricesNew(vectorToMatrix(party.Z), bi)
+		di := AddMatrixShares(party.S, ai)
+		ei := AddMatrixShares(vectorToMatrix(party.Z), bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
-	STimesZ := c.multiplicationProtocol(parties, c.signTriples.ComputeX2, dShares, eShares)
+	STimesZ := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeX2, dShares, eShares)
 
 	// [x] = [A^-1] * [b] + [S] * [z]
 	for i, party := range parties {
-		party.LittleX = matrixToVec(AddMatricesNew(AInvTimesB[i], STimesZ[i]))
+		party.LittleX = matrixToVec(AddMatrixShares(AInvTimesB[i], STimesZ[i]))
 	}
 
 	// CHECK FOR CORRECTNESS
-	AShares := make([][][]byte, len(parties))
-	XShares := make([][][]byte, len(parties))
-	YShares := make([][][]byte, len(parties))
+	AShares := make([]MatrixShare, len(parties))
+	XShares := make([]MatrixShare, len(parties))
+	YShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		AShares[partyNumber] = party.A
 		XShares[partyNumber] = vectorToMatrix(party.LittleX)
 		YShares[partyNumber] = vectorToMatrix(party.LittleY)
 	}
-	AOpen := c.algo.openMatrix(AShares)
-	XOpen := c.algo.openMatrix(XShares)
-	YOpen := c.algo.openMatrix(YShares)
-	// CHECK FOR CORRECTNESS
+	AOpen, err := c.algo.authenticatedOpenMatrix(AShares)
+	if err != nil {
+		panic(err)
+	}
+
+	XOpen, err := c.algo.authenticatedOpenMatrix(XShares)
+	if err != nil {
+		panic(err)
+	}
+
+	YOpen, err := c.algo.authenticatedOpenMatrix(YShares)
+	if err != nil {
+		panic(err)
+	}
 
 	//p := parties[0]
 	ATimesX := MultiplyMatrices(AOpen, XOpen)
@@ -158,4 +171,5 @@ func (c *Context) computeLittleX(parties []*Party) {
 	if !reflect.DeepEqual(ATimesX, xd6) {
 		panic("solve did not find a correct solution")
 	}
+	// CHECK FOR CORRECTNESS
 }

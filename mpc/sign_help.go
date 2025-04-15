@@ -10,31 +10,30 @@ func (c *Context) computeM(parties []*Party, message []byte, iteration int) {
 	salt := rand.Coin(len(parties), lambda)
 	t := rand.Shake256(m, message, salt)
 
-	for _, party := range parties {
-		V := rand.Matrix(k, v)
+	VShares := createSharesForRandomMatrix(len(parties), k, v)
+	for i, party := range parties {
 		party.Salt = salt
-		party.V = V
+		party.V = VShares[i]
 		party.LittleT = t
-		party.M = make([][][]byte, m)
-		party.Y = make([][][]byte, m)
+		party.M = make([]MatrixShare, m)
+		party.Y = make([]MatrixShare, m)
 	}
 
-	VShares := make([][][]byte, len(parties))
-	for i, party := range parties {
-		VShares[i] = party.V
+	VOpen, err := c.algo.authenticatedOpenMatrix(VShares)
+	if err != nil {
+		panic(err)
 	}
-	VOpen := c.algo.openMatrix(VShares)
 
 	for i := 0; i < m; i++ {
-		dShares := make([][][]byte, len(parties))
-		eShares := make([][][]byte, len(parties))
+		dShares := make([]MatrixShare, len(parties))
+		eShares := make([]MatrixShare, len(parties))
 
 		// Compute locally
 		for partyNumber, party := range parties {
 			ai := c.signTriples.ComputeM[iteration][i].A[partyNumber]
 			bi := c.signTriples.ComputeM[iteration][i].B[partyNumber]
-			di := AddMatricesNew(party.V, ai)
-			ei := AddMatricesNew(party.EskShare.L[i].shares, bi)
+			di := AddMatrixShares(party.V, ai)
+			ei := AddMatrixShares(party.EskShare.L[i], bi)
 
 			party.VReconstructed = VOpen
 
@@ -43,21 +42,26 @@ func (c *Context) computeM(parties []*Party, message []byte, iteration int) {
 		}
 
 		// Open d, e and compute locally
-		zShares := c.multiplicationProtocol(parties, c.signTriples.ComputeM[iteration][i], dShares, eShares)
+		zShares := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeM[iteration][i], dShares, eShares)
 		for partyNumber, party := range parties {
 			party.M[i] = zShares[partyNumber]
 		}
 
 		// CHECK FOR CORRECTNESS
-		MShares := make([][][]byte, len(parties))
-		LShares := make([][][]byte, len(parties))
+		MShares := make([]MatrixShare, len(parties))
+		LShares := make([]MatrixShare, len(parties))
 		for partyNumber, party := range parties {
 			MShares[partyNumber] = party.M[i]
-			LShares[partyNumber] = party.EskShare.L[i].shares
+			LShares[partyNumber] = party.EskShare.L[i]
 		}
-		MOpen := c.algo.openMatrix(MShares)
-		LOpen := c.algo.openMatrix(LShares)
-
+		MOpen, err := c.algo.authenticatedOpenMatrix(MShares)
+		if err != nil {
+			panic(err)
+		}
+		LOpen, err := c.algo.authenticatedOpenMatrix(LShares)
+		if err != nil {
+			panic(err)
+		}
 		if !reflect.DeepEqual(MOpen, MultiplyMatrices(VOpen, LOpen)) {
 			panic("M is not equal to V * L")
 		}
@@ -67,32 +71,35 @@ func (c *Context) computeM(parties []*Party, message []byte, iteration int) {
 
 func (c *Context) computeY(parties []*Party, iteration int) {
 	for i := 0; i < m; i++ {
-		dShares := make([][][]byte, len(parties))
-		eShares := make([][][]byte, len(parties))
+		dShares := make([]MatrixShare, len(parties))
+		eShares := make([]MatrixShare, len(parties))
 
 		// Compute locally
 		for partyNumber, party := range parties {
 			ai := c.signTriples.ComputeY[iteration][i].A[partyNumber]
 			bi := c.signTriples.ComputeY[iteration][i].B[partyNumber]
-			di := AddMatricesNew(MultiplyMatrices(party.V, party.Epk.P1[i]), ai)
-			ei := AddMatricesNew(MatrixTranspose(party.V), bi)
+			di := AddMatrixShares(MulPublicRight(party.V, party.Epk.P1[i]), ai)
+			ei := AddMatrixShares(MatrixShareTranspose(party.V), bi)
 
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
 		}
 
 		// Open d, e and compute locally
-		zShares := c.multiplicationProtocol(parties, c.signTriples.ComputeY[iteration][i], dShares, eShares)
+		zShares := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeY[iteration][i], dShares, eShares)
 		for partyNumber, party := range parties {
 			party.Y[i] = zShares[partyNumber]
 		}
 
 		// CHECK FOR CORRECTNESS
-		YShares := make([][][]byte, len(parties))
+		YShares := make([]MatrixShare, len(parties))
 		for partyNumber, party := range parties {
 			YShares[partyNumber] = party.Y[i]
 		}
-		YOpen := c.algo.openMatrix(YShares)
+		YOpen, err := c.algo.authenticatedOpenMatrix(YShares)
+		if err != nil {
+			panic(err)
+		}
 		if !reflect.DeepEqual(YOpen, MultiplyMatrices(MultiplyMatrices(parties[0].VReconstructed,
 			parties[0].Epk.P1[i]), MatrixTranspose(parties[0].VReconstructed))) {
 			panic("Y is not equal to V * P1 * V^T")
@@ -112,7 +119,7 @@ func (c *Context) localComputeA(parties []*Party) {
 
 		for t := 0; t < k; t++ {
 			for j := 0; j < m; j++ {
-				copy(MHat[t][j][:], party.M[j][t][:])
+				copy(MHat[t][j][:], party.M[j].shares[t][:])
 			}
 		}
 
@@ -149,11 +156,11 @@ func (c *Context) localComputeY(parties []*Party) {
 				u := make([]byte, m)
 				if j == t {
 					for a := 0; a < m; a++ {
-						u[a] = party.Y[a][j][j]
+						u[a] = party.Y[a].shares[j][j]
 					}
 				} else {
 					for a := 0; a < m; a++ {
-						u[a] = party.Y[a][j][t] ^ party.Y[a][t][j]
+						u[a] = party.Y[a].shares[j][t] ^ party.Y[a].shares[t][j]
 					}
 				}
 
@@ -178,36 +185,49 @@ func (c *Context) localComputeY(parties []*Party) {
 
 func (c *Context) computeSignature(parties []*Party) model.ThresholdSignature {
 	// [X * O^T] = [X] * [O^t]
-	dShares := make([][][]byte, len(parties))
-	eShares := make([][][]byte, len(parties))
+	dShares := make([]MatrixShare, len(parties))
+	eShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		party.X = matrixify(party.LittleX, k, o)
 
 		ai := c.signTriples.ComputeSignature.A[partyNumber]
 		bi := c.signTriples.ComputeSignature.B[partyNumber]
-		di := AddMatricesNew(party.X, ai)
-		ei := AddMatricesNew(MatrixTranspose(party.EskShare.O.shares), bi)
+		di := AddMatrixShares(party.X, ai)
+		ei := AddMatrixShares(MatrixShareTranspose(party.EskShare.O), bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
 	}
 
 	// Open d, e and compute locally
-	xTimesOTransposedShares := c.multiplicationProtocol(parties, c.signTriples.ComputeSignature, dShares, eShares)
+	xTimesOTransposedShares := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeSignature, dShares, eShares)
 
 	// CHECK FOR CORRECTNESS
-	xTimesOTransposedOpen := c.algo.openMatrix(xTimesOTransposedShares)
-	XShares := make([][][]byte, len(parties))
-	OShares := make([][][]byte, len(parties))
-	VShares := make([][][]byte, len(parties))
+	xTimesOTransposedOpen, err := c.algo.authenticatedOpenMatrix(xTimesOTransposedShares)
+	if err != nil {
+		panic(err)
+	}
+
+	XShares := make([]MatrixShare, len(parties))
+	OShares := make([]MatrixShare, len(parties))
+	VShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		XShares[partyNumber] = party.X
-		OShares[partyNumber] = party.EskShare.O.shares
+		OShares[partyNumber] = party.EskShare.O
 		VShares[partyNumber] = party.V
 	}
-	XOpen := c.algo.openMatrix(XShares)
-	OOpen := c.algo.openMatrix(OShares)
-	VOpen := c.algo.openMatrix(VShares)
+	XOpen, err := c.algo.authenticatedOpenMatrix(XShares)
+	if err != nil {
+		panic(err)
+	}
+	OOpen, err := c.algo.authenticatedOpenMatrix(OShares)
+	if err != nil {
+		panic(err)
+	}
+	VOpen, err := c.algo.authenticatedOpenMatrix(VShares)
+	if err != nil {
+		panic(err)
+	}
 	if !reflect.DeepEqual(xTimesOTransposedOpen, MultiplyMatrices(XOpen, MatrixTranspose(OOpen))) {
 		panic("XO^T != X * O^T")
 	}
@@ -217,14 +237,17 @@ func (c *Context) computeSignature(parties []*Party) model.ThresholdSignature {
 	// CHECK FOR CORRECTNESS
 
 	// [S'] = [V + (OX^T)^T)]
-	SPrimeShares := make([][][]byte, len(parties))
+	SPrimeShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
-		SPrimeShares[partyNumber] = AddMatricesNew(party.V, xTimesOTransposedShares[partyNumber])
+		SPrimeShares[partyNumber] = AddMatrixShares(party.V, xTimesOTransposedShares[partyNumber])
 		party.SPrime = SPrimeShares[partyNumber]
 	}
 
 	// Open S' and X
-	SPrimeOpen := c.algo.openMatrix(SPrimeShares)
+	SPrimeOpen, err := c.algo.authenticatedOpenMatrix(SPrimeShares)
+	if err != nil {
+		panic(err)
+	}
 
 	s := appendMatrixHorizontal(SPrimeOpen, XOpen)
 	for _, party := range parties {

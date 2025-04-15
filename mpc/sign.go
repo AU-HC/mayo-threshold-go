@@ -9,7 +9,7 @@ const AmountOfMultiplicationTriples = 4
 // ThresholdVerifiableSignAPI takes a message, parties and outputs an 'opened' signature, which can be verified using
 // original MAYO, or using the Verify method. Note that this method also preprocesses the multiplication triples needed
 // for an execution of the protocol.
-func (c *Context) ThresholdVerifiableSignAPI(message []byte, parties []*model.Party) model.ThresholdSignature {
+func (c *Context) ThresholdVerifiableSignAPI(message []byte, parties []*Party) model.ThresholdSignature {
 	c.PreprocessMultiplicationSignTriples(AmountOfMultiplicationTriples)
 	thresholdSignature := c.ThresholdVerifiableSign(message, parties)
 	return thresholdSignature
@@ -17,7 +17,7 @@ func (c *Context) ThresholdVerifiableSignAPI(message []byte, parties []*model.Pa
 
 // ThresholdVerifiableSign takes a message, parties and outputs an 'opened' signature, which can be verified using
 // original MAYO, or using the Verify method.
-func (c *Context) ThresholdVerifiableSign(message []byte, parties []*model.Party) model.ThresholdSignature {
+func (c *Context) ThresholdVerifiableSign(message []byte, parties []*Party) model.ThresholdSignature {
 	iteration := 0
 
 	for true {
@@ -50,7 +50,7 @@ func (c *Context) ThresholdVerifiableSign(message []byte, parties []*model.Party
 }
 
 // SignAPI Also preprocesses the multiplication triples needed for an execution of the protocol.
-func (c *Context) SignAPI(message []byte, parties []*model.Party) model.Signature {
+func (c *Context) SignAPI(message []byte, parties []*Party) model.Signature {
 	// Compute signature
 	c.PreprocessMultiplicationSignTriples(AmountOfMultiplicationTriples)
 	thresholdSignature := c.ThresholdVerifiableSign(message, parties)
@@ -65,7 +65,7 @@ func (c *Context) SignAPI(message []byte, parties []*model.Party) model.Signatur
 	}
 }
 
-func (c *Context) Sign(message []byte, parties []*model.Party) model.Signature {
+func (c *Context) Sign(message []byte, parties []*Party) model.Signature {
 	// Compute signature
 	thresholdSignature := c.ThresholdVerifiableSign(message, parties)
 

@@ -1,21 +1,19 @@
 package mpc
 
-import "mayo-threshold-go/model"
-
 type PreprocessedMultiplicationSignTriples struct {
-	ComputeM         [][]model.Triple
-	ComputeY         [][]model.Triple
-	ComputeT1        []model.Triple
-	ComputeT2        []model.Triple
-	ComputeAInverse  model.Triple
-	ComputeX1        model.Triple
-	ComputeX2        model.Triple
-	ComputeSignature model.Triple
+	ComputeM         [][]Triple
+	ComputeY         [][]Triple
+	ComputeT1        []Triple
+	ComputeT2        []Triple
+	ComputeAInverse  Triple
+	ComputeX1        Triple
+	ComputeX2        Triple
+	ComputeSignature Triple
 }
 
 func (c *Context) PreprocessMultiplicationSignTriples(amountOfTries int) {
-	mTriples := make([][]model.Triple, amountOfTries)
-	yTriples := make([][]model.Triple, amountOfTries)
+	mTriples := make([][]Triple, amountOfTries)
+	yTriples := make([][]Triple, amountOfTries)
 	for i := 0; i < amountOfTries; i++ {
 		mTriples[i] = c.GenerateMultiplicationTriples(k, v, v, o, m)
 		yTriples[i] = c.GenerateMultiplicationTriples(k, v, v, k, m)
@@ -35,11 +33,11 @@ func (c *Context) PreprocessMultiplicationSignTriples(amountOfTries int) {
 }
 
 type PreprocessedMultiplicationKeyGenTriples struct {
-	TriplesStep4 []model.Triple
+	TriplesStep4 []ActiveTriple
 }
 
 func (c *Context) PreprocessMultiplicationKeyGenTriples() {
 	c.keygenTriples = PreprocessedMultiplicationKeyGenTriples{
-		TriplesStep4: c.GenerateMultiplicationTriples(o, v, v, o, m),
+		TriplesStep4: c.GenerateMultiplicationActiveTriples(o, v, v, o, m),
 	}
 }

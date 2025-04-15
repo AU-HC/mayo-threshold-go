@@ -3,7 +3,6 @@ package rand
 import (
 	"crypto/sha3"
 	"math/rand"
-	"mayo-threshold-go/model"
 )
 
 func SampleFieldElement() byte {
@@ -38,11 +37,11 @@ func Shake256(outputLength int, inputs ...[]byte) []byte {
 	return output
 }
 
-func Coin(parties []*model.Party, lambda int) []byte {
+func Coin(amountOfParties, lambda int) []byte {
 	result := make([]byte, lambda+64)
 
 	for i := 0; i < lambda+64; i++ {
-		for _, _ = range parties {
+		for j := 0; j < amountOfParties; j++ {
 			result[i] ^= SampleFieldElement()
 		}
 	}
@@ -50,12 +49,12 @@ func Coin(parties []*model.Party, lambda int) []byte {
 	return result
 }
 
-func CoinMatrix(parties []*model.Party, r, c int) [][]byte {
+func CoinMatrix(amountOfParties, r, c int) [][]byte {
 	matrix := make([][]byte, r)
 	for i := range matrix {
 		matrix[i] = make([]byte, c)
 		for j := 0; j < c; j++ {
-			for range parties {
+			for k := 0; k < amountOfParties; k++ {
 				matrix[i][j] ^= SampleFieldElement()
 			}
 		}

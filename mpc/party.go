@@ -1,4 +1,4 @@
-package model
+package mpc
 
 type Party struct {
 	EskShare          ExpandedSecretKey

@@ -24,6 +24,14 @@ func createEmptyMatrixShare(rows, cols int) MatrixShare {
 
 var globalAlpha = byte(13)
 
+func MatrixShareTranspose(m MatrixShare) MatrixShare {
+	return MatrixShare{
+		shares: MatrixTranspose(m.shares),
+		alphas: MatrixTranspose(m.alphas),
+		gammas: MatrixTranspose(m.gammas),
+	}
+}
+
 func generateSharesForElement(n int, secret byte) []Share {
 	shares := make([]byte, n)
 	alphas := make([]byte, n)
@@ -127,9 +135,9 @@ func AddMatrixShares(A, B MatrixShare) MatrixShare {
 	return result
 }
 
-func AddMatrixWithConstant(A [][]byte, B MatrixShare, xd int) MatrixShare {
+func AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
-	if xd == 0 {
+	if partyNumber == 0 {
 		result.shares = AddMatricesNew(A, B.shares)
 		result.gammas = AddMatricesNew(B.gammas, MultiplyMatricesElementWise(A, B.alphas))
 		result.alphas = B.alphas
@@ -142,7 +150,7 @@ func AddMatrixWithConstant(A [][]byte, B MatrixShare, xd int) MatrixShare {
 	return result
 }
 
-func MulMatrixShareWithConstantLeft(A [][]byte, B MatrixShare) MatrixShare {
+func MulPublicLeft(A [][]byte, B MatrixShare) MatrixShare {
 	var result MatrixShare
 	result.shares = MultiplyMatrices(A, B.shares)
 	result.gammas = MultiplyMatrices(A, B.gammas)
@@ -157,7 +165,7 @@ func MulMatrixShareWithConstantLeft(A [][]byte, B MatrixShare) MatrixShare {
 	return result
 }
 
-func MulMatrixShareWithConstantRight(A MatrixShare, B [][]byte) MatrixShare {
+func MulPublicRight(A MatrixShare, B [][]byte) MatrixShare {
 	var result MatrixShare
 	result.shares = MultiplyMatrices(A.shares, B)
 	result.gammas = MultiplyMatrices(A.gammas, B)

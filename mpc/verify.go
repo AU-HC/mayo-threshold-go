@@ -9,7 +9,7 @@ import (
 const Tau = 1
 
 // ThresholdVerify takes an 'secret shared' signature and checks if it is valid for the message under the public key
-func (c *Context) ThresholdVerify(parties []*model.Party, signature model.ThresholdSignature) bool {
+func (c *Context) ThresholdVerify(parties []*Party, signature model.ThresholdSignature) bool {
 	p := parties[0]
 	P := calculateP(p.Epk.P1, p.Epk.P2, p.Epk.P3)
 
@@ -43,7 +43,7 @@ func (c *Context) ThresholdVerify(parties []*model.Party, signature model.Thresh
 		zShares[i] = party.LittleY
 	}
 
-	alphaValues := rand.CoinMatrix(parties, m, Tau)
+	alphaValues := rand.CoinMatrix(len(parties), m, Tau)
 	w := make([][]byte, m)
 
 	for i := 0; i < Tau; i++ {
@@ -62,7 +62,7 @@ func (c *Context) ThresholdVerify(parties []*model.Party, signature model.Thresh
 }
 
 // Verify takes an 'opened' signature and checks if it is valid for the message under the public key
-func (c *Context) Verify(epk model.ExpandedPublicKey, message []byte, signature model.Signature) bool {
+func (c *Context) Verify(epk ExpandedPublicKey, message []byte, signature model.Signature) bool {
 	P := calculateP(epk.P1, epk.P2, epk.P3)
 	Y := make([][][]byte, m)
 	t := rand.Shake256(m, message, signature.Salt)
@@ -73,8 +73,8 @@ func (c *Context) Verify(epk model.ExpandedPublicKey, message []byte, signature 
 	}
 
 	// Create party, due to how code is structured
-	parties := make([]*model.Party, 1)
-	parties[0] = &model.Party{Y: Y, LittleT: t}
+	parties := make([]*Party, 1)
+	parties[0] = &Party{Y: Y, LittleT: t}
 	c.localComputeY(parties)
 
 	zero := make([]byte, m)

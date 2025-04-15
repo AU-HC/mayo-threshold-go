@@ -7,13 +7,15 @@ import (
 )
 
 // upper transposes the lower triangular part of a matrix to the upper triangular part
-func upper(matrix [][]byte) [][]byte {
-	n := len(matrix)
+func upper(matrix MatrixShare) MatrixShare {
+	n := len(matrix.shares)
 
 	for i := 0; i < n; i++ {
 		for j := i + 1; j < n; j++ {
-			matrix[i][j] = matrix[i][j] ^ matrix[j][i] // Update upper triangular part
-			matrix[j][i] = 0
+			matrix.shares[i][j] = matrix.shares[i][j] ^ matrix.shares[j][i] // Update upper triangular part
+			matrix.shares[j][i] = 0
+			matrix.gammas[i][j] = matrix.gammas[i][j] ^ matrix.gammas[j][i]
+			matrix.gammas[j][i] = 0
 		}
 	}
 

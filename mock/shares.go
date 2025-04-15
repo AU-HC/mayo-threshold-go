@@ -1,14 +1,14 @@
 package mock
 
 import (
-	"mayo-threshold-go/model"
+	"mayo-threshold-go/mpc"
 	"mayo-threshold-go/rand"
 	"reflect"
 )
 
-func CreatePartiesAndSharesForEsk(esk model.ExpandedSecretKey, epk model.ExpandedPublicKey, n int) []*model.Party {
+func CreatePartiesAndSharesForEsk(esk mpc.ExpandedSecretKey, epk mpc.ExpandedPublicKey, n int) []*mpc.Party {
 	// First create the empty structs
-	eskShares := make([]model.ExpandedSecretKey, n)
+	eskShares := make([]mpc.ExpandedSecretKey, n)
 	for i := 0; i < n; i++ {
 		eskShares[i] = getNewExpandedSecretKey()
 	}
@@ -36,9 +36,9 @@ func CreatePartiesAndSharesForEsk(esk model.ExpandedSecretKey, epk model.Expande
 	}
 
 	// Set the epk and the esk shares
-	parties := make([]*model.Party, n)
+	parties := make([]*mpc.Party, n)
 	for i := 0; i < n; i++ {
-		party := &model.Party{EskShare: eskShares[i], Epk: epk}
+		party := &mpc.Party{EskShare: eskShares[i], Epk: epk}
 		parties[i] = party
 	}
 	return parties
@@ -58,7 +58,7 @@ func generateSharesForElement(n int, element byte) []byte {
 	return shares
 }
 
-func VerifyShares(esk model.ExpandedSecretKey, parties []*model.Party) bool {
+func VerifyShares(esk mpc.ExpandedSecretKey, parties []*mpc.Party) bool {
 	n := len(parties)
 	if n == 0 {
 		return false

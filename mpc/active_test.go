@@ -54,7 +54,7 @@ func TestActiveAddMatricesWithConstant(t *testing.T) {
 
 	result := make([]MatrixShare, parties)
 	for i := 0; i < parties; i++ {
-		result[i] = AddMatrixWithConstant(matrix2, shares1[i], i)
+		result[i] = AddPublicLeft(matrix2, shares1[i], i)
 	}
 
 	actual, err := openMatrix(result)
@@ -75,7 +75,7 @@ func TestActiveMulMatrixShareWithConstantLeft(t *testing.T) {
 
 	result := make([]MatrixShare, parties)
 	for i := 0; i < parties; i++ {
-		result[i] = MulMatrixShareWithConstantLeft(matrix1, shares2[i])
+		result[i] = MulPublicLeft(matrix1, shares2[i])
 	}
 
 	actual, err := openMatrix(result)
@@ -96,7 +96,7 @@ func TestActiveMulMatrixShareWithConstantLeftOtherDimension(t *testing.T) {
 
 	result := make([]MatrixShare, parties)
 	for i := 0; i < parties; i++ {
-		result[i] = MulMatrixShareWithConstantLeft(matrix1, shares2[i])
+		result[i] = MulPublicLeft(matrix1, shares2[i])
 	}
 
 	actual, err := openMatrix(result)
@@ -117,7 +117,7 @@ func TestActiveMulMatrixShareWithConstantRightOtherDimension(t *testing.T) {
 
 	result := make([]MatrixShare, parties)
 	for i := 0; i < parties; i++ {
-		result[i] = MulMatrixShareWithConstantRight(shares1[i], matrix2)
+		result[i] = MulPublicRight(shares1[i], matrix2)
 	}
 
 	actual, err := openMatrix(result)
@@ -138,7 +138,7 @@ func TestActiveMulMatrixShareWithConstantRight(t *testing.T) {
 
 	result := make([]MatrixShare, parties)
 	for i := 0; i < parties; i++ {
-		result[i] = MulMatrixShareWithConstantRight(shares1[i], matrix2)
+		result[i] = MulPublicRight(shares1[i], matrix2)
 	}
 
 	actual, err := openMatrix(result)

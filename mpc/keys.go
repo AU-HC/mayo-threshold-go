@@ -1,9 +1,9 @@
-package model
+package mpc
 
 type ExpandedSecretKey struct {
 	P1 [][][]byte
-	L  [][][]byte
-	O  [][]byte
+	L  []MatrixShare
+	O  MatrixShare
 }
 
 type ExpandedPublicKey struct {

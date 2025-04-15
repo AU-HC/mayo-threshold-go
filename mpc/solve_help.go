@@ -2,12 +2,11 @@ package mpc
 
 import (
 	"fmt"
-	"mayo-threshold-go/model"
 	"mayo-threshold-go/rand"
 	"reflect"
 )
 
-func (c *Context) computeT(parties []*model.Party, iteration int) bool {
+func (c *Context) computeT(parties []*Party, iteration int) bool {
 	s := len(parties[0].A)
 	t := len(parties[0].A[0])
 
@@ -56,7 +55,7 @@ func (c *Context) computeT(parties []*model.Party, iteration int) bool {
 	return isFullRank(T)
 }
 
-func (c *Context) computeAInverse(parties []*model.Party) {
+func (c *Context) computeAInverse(parties []*Party) {
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
 
@@ -80,7 +79,7 @@ func (c *Context) computeAInverse(parties []*model.Party) {
 	}
 }
 
-func (c *Context) computeLittleX(parties []*model.Party) {
+func (c *Context) computeLittleX(parties []*Party) {
 	s := len(parties[0].A)
 	t := len(parties[0].A[0])
 

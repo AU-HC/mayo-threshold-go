@@ -6,8 +6,8 @@ import (
 	"reflect"
 )
 
-func (c *Context) computeM(parties []*model.Party, message []byte, iteration int) {
-	salt := rand.Coin(parties, lambda)
+func (c *Context) computeM(parties []*Party, message []byte, iteration int) {
+	salt := rand.Coin(len(parties), lambda)
 	t := rand.Shake256(m, message, salt)
 
 	for _, party := range parties {
@@ -34,7 +34,7 @@ func (c *Context) computeM(parties []*model.Party, message []byte, iteration int
 			ai := c.signTriples.ComputeM[iteration][i].A[partyNumber]
 			bi := c.signTriples.ComputeM[iteration][i].B[partyNumber]
 			di := AddMatricesNew(party.V, ai)
-			ei := AddMatricesNew(party.EskShare.L[i], bi)
+			ei := AddMatricesNew(party.EskShare.L[i].shares, bi)
 
 			party.VReconstructed = VOpen
 
@@ -53,7 +53,7 @@ func (c *Context) computeM(parties []*model.Party, message []byte, iteration int
 		LShares := make([][][]byte, len(parties))
 		for partyNumber, party := range parties {
 			MShares[partyNumber] = party.M[i]
-			LShares[partyNumber] = party.EskShare.L[i]
+			LShares[partyNumber] = party.EskShare.L[i].shares
 		}
 		MOpen := c.algo.openMatrix(MShares)
 		LOpen := c.algo.openMatrix(LShares)
@@ -65,7 +65,7 @@ func (c *Context) computeM(parties []*model.Party, message []byte, iteration int
 	}
 }
 
-func (c *Context) computeY(parties []*model.Party, iteration int) {
+func (c *Context) computeY(parties []*Party, iteration int) {
 	for i := 0; i < m; i++ {
 		dShares := make([][][]byte, len(parties))
 		eShares := make([][][]byte, len(parties))
@@ -101,7 +101,7 @@ func (c *Context) computeY(parties []*model.Party, iteration int) {
 	}
 }
 
-func (c *Context) localComputeA(parties []*model.Party) {
+func (c *Context) localComputeA(parties []*Party) {
 	for _, party := range parties {
 		A := generateZeroMatrix(m+shifts, k*o)
 		ell := 0
@@ -139,7 +139,7 @@ func (c *Context) localComputeA(parties []*model.Party) {
 	}
 }
 
-func (c *Context) localComputeY(parties []*model.Party) {
+func (c *Context) localComputeY(parties []*Party) {
 	for partyNumber, party := range parties {
 		y := make([]byte, m+shifts)
 		ell := 0
@@ -176,7 +176,7 @@ func (c *Context) localComputeY(parties []*model.Party) {
 	}
 }
 
-func (c *Context) computeSignature(parties []*model.Party) model.ThresholdSignature {
+func (c *Context) computeSignature(parties []*Party) model.ThresholdSignature {
 	// [X * O^T] = [X] * [O^t]
 	dShares := make([][][]byte, len(parties))
 	eShares := make([][][]byte, len(parties))
@@ -186,7 +186,7 @@ func (c *Context) computeSignature(parties []*model.Party) model.ThresholdSignat
 		ai := c.signTriples.ComputeSignature.A[partyNumber]
 		bi := c.signTriples.ComputeSignature.B[partyNumber]
 		di := AddMatricesNew(party.X, ai)
-		ei := AddMatricesNew(MatrixTranspose(party.EskShare.O), bi)
+		ei := AddMatricesNew(MatrixTranspose(party.EskShare.O.shares), bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
@@ -202,7 +202,7 @@ func (c *Context) computeSignature(parties []*model.Party) model.ThresholdSignat
 	VShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
 		XShares[partyNumber] = party.X
-		OShares[partyNumber] = party.EskShare.O
+		OShares[partyNumber] = party.EskShare.O.shares
 		VShares[partyNumber] = party.V
 	}
 	XOpen := c.algo.openMatrix(XShares)

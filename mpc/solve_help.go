@@ -94,17 +94,15 @@ func (c *Context) computeLittleX(parties []*Party) {
 	zShares := createSharesForRandomMatrix(len(parties), t-s, 1)
 	for partyNumber, party := range parties {
 		z := createEmptyMatrixShare(t, 1)
+		z.alpha = party.LittleY.alpha
+
 		zVector := zShares[partyNumber]
-
-		//for index, elem := range zVector {
-		//	z = AddVec(z, MultiplyVecConstant(elem, basis[index]))
-		//}
-
 		for index := 0; index < len(zVector.shares); index++ {
 			shareElem := zVector.shares[index][0]
-			//gammaElem := zVector.gammas[index][0]
+			gammaElem := zVector.gammas[index][0]
 
-			z = AddPublicLeft(vectorToMatrix(MultiplyVecConstant(shareElem, basis[index])), z, partyNumber)
+			AddMatrices(z.shares, vectorToMatrix(MultiplyVecConstant(shareElem, basis[index])))
+			AddMatrices(z.gammas, vectorToMatrix(MultiplyVecConstant(gammaElem, basis[index])))
 		}
 
 		party.Z = z

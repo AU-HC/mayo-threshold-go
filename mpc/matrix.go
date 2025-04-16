@@ -72,24 +72,22 @@ func matrixify(v []byte, rows, cols int) [][]byte {
 }
 
 func matrixifyActive(v MatrixShare, rows, cols int) MatrixShare {
-	if len(v.shares) != rows*cols || len(v.alphas) != rows*cols || len(v.gammas) != rows*cols {
+	if len(v.shares) != rows*cols || len(v.gammas) != rows*cols {
 		panic(fmt.Errorf("input does not have the correct dimensions for matrixifyActive"))
 	}
 
 	matrix := MatrixShare{
 		shares: make([][]byte, rows),
-		alphas: make([][]byte, rows),
 		gammas: make([][]byte, rows),
+		alpha:  v.alpha,
 	}
 
 	for i := 0; i < rows; i++ {
 		matrix.shares[i] = make([]byte, cols)
-		matrix.alphas[i] = make([]byte, cols)
 		matrix.gammas[i] = make([]byte, cols)
 		for j := 0; j < cols; j++ {
 			idx := i*cols + j
 			matrix.shares[i][j] = v.shares[idx][0]
-			matrix.alphas[i][j] = v.alphas[idx][0]
 			matrix.gammas[i][j] = v.gammas[idx][0]
 		}
 	}
@@ -229,8 +227,8 @@ func appendMatrixShareHorizontal(A, B MatrixShare) MatrixShare {
 	for i := 0; i < len(A.shares); i++ {
 		result.shares[i] = append(A.shares[i], B.shares[i]...)
 		result.gammas[i] = append(A.gammas[i], B.gammas[i]...)
-		result.alphas[i] = append(A.alphas[i], B.alphas[i]...)
 	}
+	result.alpha = A.alpha
 	return result
 }
 

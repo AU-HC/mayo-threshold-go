@@ -1,7 +1,6 @@
 package mpc
 
 import (
-	"mayo-threshold-go/model"
 	"mayo-threshold-go/rand"
 	"reflect"
 )
@@ -110,7 +109,7 @@ func (c *Context) computeY(parties []*Party, iteration int) {
 
 func (c *Context) localComputeA(parties []*Party) {
 	for _, party := range parties {
-		A := generateZeroMatrix(m+shifts, k*o)
+		A := createEmptyMatrixShare(m+shifts, k*o)
 		ell := 0
 		MHat := make([][][]byte, k)
 		for index := 0; index < k; index++ {
@@ -127,12 +126,12 @@ func (c *Context) localComputeA(parties []*Party) {
 			for j := k - 1; j >= t; j-- {
 				for row := 0; row < m; row++ {
 					for column := t * o; column < (t+1)*o; column++ {
-						A[row+ell][column] ^= MHat[j][row][column%o]
+						A.shares[row+ell][column] ^= MHat[j][row][column%o]
 					}
 
 					if t != j {
 						for column := j * o; column < (j+1)*o; column++ {
-							A[row+ell][column] ^= MHat[t][row][column%o]
+							A.shares[row+ell][column] ^= MHat[t][row][column%o]
 						}
 					}
 				}
@@ -141,54 +140,59 @@ func (c *Context) localComputeA(parties []*Party) {
 			}
 		}
 
-		A = reduceAModF(A)
+		A.shares = reduceAModF(A.shares)
+		A.gammas = reduceAModF(A.gammas)
+		A.alphas = A.alphas[:m]
 		party.A = A
 	}
 }
 
 func (c *Context) localComputeY(parties []*Party) {
 	for partyNumber, party := range parties {
-		y := make([]byte, m+shifts)
+		y := createEmptyMatrixShare(m+shifts, 1)
 		ell := 0
 
 		for j := 0; j < k; j++ {
 			for t := k - 1; t >= j; t-- {
-				u := make([]byte, m)
+				uShares := make([]byte, m)
+				uGammas := make([]byte, m)
 				if j == t {
 					for a := 0; a < m; a++ {
-						u[a] = party.Y[a].shares[j][j]
+						uShares[a] = party.Y[a].shares[j][j]
+						uGammas[a] = party.Y[a].shares[j][j]
 					}
 				} else {
 					for a := 0; a < m; a++ {
-						u[a] = party.Y[a].shares[j][t] ^ party.Y[a].shares[t][j]
+						uShares[a] = party.Y[a].shares[j][t] ^ party.Y[a].shares[t][j]
+						uGammas[a] = party.Y[a].shares[j][t] ^ party.Y[a].shares[t][j]
 					}
 				}
 
 				for d := 0; d < m; d++ {
-					y[d+ell] ^= u[d]
+					y.shares[d+ell][0] ^= uShares[d]
+					y.gammas[d+ell][0] ^= uGammas[d]
 				}
 
 				ell++
 			}
 		}
 
-		y = reduceVecModF(y)
-		if c.algo.shouldPartyAddConstantShare(partyNumber) {
-			t := party.LittleT
-			for i := 0; i < m; i++ {
-				y[i] ^= t[i]
-			}
-		}
+		y.shares = vectorToMatrix(reduceVecModF(matrixToVec(y.shares)))
+		y.gammas = vectorToMatrix(reduceVecModF(matrixToVec(y.gammas)))
+		y.alphas = y.alphas[:m]
+
+		t := party.LittleT
+		y = AddPublicLeft(vectorToMatrix(t), y, partyNumber)
 		party.LittleY = y
 	}
 }
 
-func (c *Context) computeSignature(parties []*Party) model.ThresholdSignature {
+func (c *Context) computeSignature(parties []*Party) ThresholdSignature {
 	// [X * O^T] = [X] * [O^t]
 	dShares := make([]MatrixShare, len(parties))
 	eShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
-		party.X = matrixify(party.LittleX, k, o)
+		party.X = matrixifyActive(party.LittleX, k, o)
 
 		ai := c.signTriples.ComputeSignature.A[partyNumber]
 		bi := c.signTriples.ComputeSignature.B[partyNumber]
@@ -251,7 +255,7 @@ func (c *Context) computeSignature(parties []*Party) model.ThresholdSignature {
 
 	s := appendMatrixHorizontal(SPrimeOpen, XOpen)
 	for _, party := range parties {
-		party.Signature = appendMatrixHorizontal(party.SPrime, party.X)
+		party.Signature = appendMatrixShareHorizontal(party.SPrime, party.X)
 	}
 
 	// CHECK FOR CORRECTNESS
@@ -263,12 +267,12 @@ func (c *Context) computeSignature(parties []*Party) model.ThresholdSignature {
 	}
 	// CHECK FOR CORRECTNESS
 
-	signatureShares := make([][][]byte, len(parties))
+	signatureShares := make([]MatrixShare, len(parties))
 	for i, party := range parties {
 		signatureShares[i] = party.Signature
 	}
 
-	return model.ThresholdSignature{
+	return ThresholdSignature{
 		S:    signatureShares,
 		Salt: parties[0].Salt,
 	}

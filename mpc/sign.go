@@ -1,15 +1,11 @@
 package mpc
 
-import (
-	"mayo-threshold-go/model"
-)
-
 const AmountOfMultiplicationTriples = 4
 
 // ThresholdVerifiableSignAPI takes a message, parties and outputs an 'opened' signature, which can be verified using
 // original MAYO, or using the Verify method. Note that this method also preprocesses the multiplication triples needed
 // for an execution of the protocol.
-func (c *Context) ThresholdVerifiableSignAPI(message []byte, parties []*Party) model.ThresholdSignature {
+func (c *Context) ThresholdVerifiableSignAPI(message []byte, parties []*Party) ThresholdSignature {
 	c.PreprocessMultiplicationSignTriples(AmountOfMultiplicationTriples)
 	thresholdSignature := c.ThresholdVerifiableSign(message, parties)
 	return thresholdSignature
@@ -17,7 +13,7 @@ func (c *Context) ThresholdVerifiableSignAPI(message []byte, parties []*Party) m
 
 // ThresholdVerifiableSign takes a message, parties and outputs an 'opened' signature, which can be verified using
 // original MAYO, or using the Verify method.
-func (c *Context) ThresholdVerifiableSign(message []byte, parties []*Party) model.ThresholdSignature {
+func (c *Context) ThresholdVerifiableSign(message []byte, parties []*Party) ThresholdSignature {
 	iteration := 0
 
 	for true {
@@ -50,30 +46,36 @@ func (c *Context) ThresholdVerifiableSign(message []byte, parties []*Party) mode
 }
 
 // SignAPI Also preprocesses the multiplication triples needed for an execution of the protocol.
-func (c *Context) SignAPI(message []byte, parties []*Party) model.Signature {
+func (c *Context) SignAPI(message []byte, parties []*Party) Signature {
 	// Compute signature
 	c.PreprocessMultiplicationSignTriples(AmountOfMultiplicationTriples)
 	thresholdSignature := c.ThresholdVerifiableSign(message, parties)
 
 	// Recover the signature
-	s := c.algo.openMatrix(thresholdSignature.S)
+	s, err := c.algo.authenticatedOpenMatrix(thresholdSignature.S)
+	if err != nil {
+		panic(err)
+	}
 
 	// Return the 'revealed' signature
-	return model.Signature{
+	return Signature{
 		S:    s,
 		Salt: thresholdSignature.Salt,
 	}
 }
 
-func (c *Context) Sign(message []byte, parties []*Party) model.Signature {
+func (c *Context) Sign(message []byte, parties []*Party) Signature {
 	// Compute signature
 	thresholdSignature := c.ThresholdVerifiableSign(message, parties)
 
 	// Recover the signature
-	s := c.algo.openMatrix(thresholdSignature.S)
+	s, err := c.algo.authenticatedOpenMatrix(thresholdSignature.S)
+	if err != nil {
+		panic(err)
+	}
 
 	// Return the 'revealed' signature
-	return model.Signature{
+	return Signature{
 		S:    s,
 		Salt: thresholdSignature.Salt,
 	}

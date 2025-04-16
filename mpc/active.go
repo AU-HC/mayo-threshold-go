@@ -154,10 +154,12 @@ func MulPublicLeft(A [][]byte, B MatrixShare) MatrixShare {
 	var result MatrixShare
 	result.shares = MultiplyMatrices(A, B.shares)
 	result.gammas = MultiplyMatrices(A, B.gammas)
-	result.alphas = make([][]byte, len(result.shares))
-	for r := 0; r < len(result.shares); r++ {
-		row := make([]byte, len(result.shares))
-		for c := 0; c < len(result.shares[0]); c++ {
+
+	rows, cols := len(result.shares), len(result.shares[0])
+	result.alphas = make([][]byte, rows)
+	for r := 0; r < rows; r++ {
+		row := make([]byte, cols)
+		for c := 0; c < cols; c++ {
 			row[c] = B.alphas[0][0]
 		}
 		result.alphas[r] = row
@@ -203,24 +205,4 @@ func openMatrix(shares []MatrixShare) ([][]byte, error) {
 		return sPrime, fmt.Errorf("mu was not 0")
 	}
 	return sPrime, nil
-}
-
-func vectorToMatrixActive(x []byte) MatrixShare {
-	result := make([][]byte, len(x))
-
-	for i, elem := range x {
-		result[i] = []byte{elem}
-	}
-
-	return result
-}
-
-func matrixToVecActive(A MatrixShare) []byte {
-	result := make([]byte, len(A.shares))
-
-	for index, elem := range A.shares {
-		result[index] = elem[0]
-	}
-
-	return result
 }

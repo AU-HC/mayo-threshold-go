@@ -71,6 +71,32 @@ func matrixify(v []byte, rows, cols int) [][]byte {
 	return matrix
 }
 
+func matrixifyActive(v MatrixShare, rows, cols int) MatrixShare {
+	if len(v.shares) != rows*cols || len(v.alphas) != rows*cols || len(v.gammas) != rows*cols {
+		panic(fmt.Errorf("input does not have the correct dimensions for matrixifyActive"))
+	}
+
+	matrix := MatrixShare{
+		shares: make([][]byte, rows),
+		alphas: make([][]byte, rows),
+		gammas: make([][]byte, rows),
+	}
+
+	for i := 0; i < rows; i++ {
+		matrix.shares[i] = make([]byte, cols)
+		matrix.alphas[i] = make([]byte, cols)
+		matrix.gammas[i] = make([]byte, cols)
+		for j := 0; j < cols; j++ {
+			idx := i*cols + j
+			matrix.shares[i][j] = v.shares[idx][0]
+			matrix.alphas[i][j] = v.alphas[idx][0]
+			matrix.gammas[i][j] = v.gammas[idx][0]
+		}
+	}
+
+	return matrix
+}
+
 func generateZeroMatrix(rows, columns int) [][]byte {
 	matrix := make([][]byte, rows)
 
@@ -106,7 +132,7 @@ func AddMatrices(a, b [][]byte) {
 
 func AddMatricesNew(a, b [][]byte) [][]byte {
 	if len(a) != len(b) || len(a[0]) != len(b[0]) {
-		panic(fmt.Errorf("a and b do not have the same dimensions"))
+		panic(fmt.Errorf("a and b do not have the same dimensions (%d, %d), (%d, %d)", len(a), len(a[0]), len(b), len(b[0])))
 	}
 
 	c := generateZeroMatrix(len(a), len(a[0]))
@@ -191,6 +217,20 @@ func appendMatrixHorizontal(A, B [][]byte) [][]byte {
 		result[i] = append(A[i], B[i]...)
 	}
 
+	return result
+}
+
+func appendMatrixShareHorizontal(A, B MatrixShare) MatrixShare {
+	if len(A.shares) != len(B.shares) {
+		panic("Cannot append matrices of different row count")
+	}
+
+	result := createEmptyMatrixShare(len(A.shares), len(A.shares[0]))
+	for i := 0; i < len(A.shares); i++ {
+		result.shares[i] = append(A.shares[i], B.shares[i]...)
+		result.gammas[i] = append(A.gammas[i], B.gammas[i]...)
+		result.alphas[i] = append(A.alphas[i], B.alphas[i]...)
+	}
 	return result
 }
 

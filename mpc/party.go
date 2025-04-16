@@ -5,9 +5,9 @@ type Party struct {
 	Epk            ExpandedPublicKey
 	Salt           []byte
 	LittleT        []byte
-	LittleX        []byte
-	LittleY        []byte
-	Z              []byte
+	LittleX        MatrixShare
+	LittleY        MatrixShare
+	Z              MatrixShare
 	T              [][]byte
 	V              MatrixShare
 	VReconstructed [][]byte
@@ -17,7 +17,7 @@ type Party struct {
 	S              MatrixShare
 	SPrime         MatrixShare
 	X              MatrixShare
-	Signature      [][]byte
+	Signature      MatrixShare
 	M              []MatrixShare
 	Y              []MatrixShare
 }

@@ -2,15 +2,14 @@ package mpc
 
 import (
 	"bytes"
-	"mayo-threshold-go/model"
 	"mayo-threshold-go/rand"
 )
 
 const Tau = 1
 
 // ThresholdVerify takes an 'secret shared' signature and checks if it is valid for the message under the public key
-func (c *Context) ThresholdVerify(parties []*Party, signature model.ThresholdSignature) bool {
-	p := parties[0]
+func (c *Context) ThresholdVerify(parties []*Party, signature ThresholdSignature) bool {
+	/*p := parties[0]
 	P := calculateP(p.Epk.P1, p.Epk.P2, p.Epk.P3)
 
 	for i := 0; i < m; i++ {
@@ -59,17 +58,21 @@ func (c *Context) ThresholdVerify(parties []*Party, signature model.ThresholdSig
 	zero := make([]byte, m)
 
 	return bytes.Equal(z, zero)
+
+	*/
+	panic("implement me!")
 }
 
 // Verify takes an 'opened' signature and checks if it is valid for the message under the public key
-func (c *Context) Verify(epk ExpandedPublicKey, message []byte, signature model.Signature) bool {
+func (c *Context) Verify(epk ExpandedPublicKey, message []byte, signature Signature) bool {
 	P := calculateP(epk.P1, epk.P2, epk.P3)
-	Y := make([][][]byte, m)
+	Y := make([]MatrixShare, m)
 	t := rand.Shake256(m, message, signature.Salt)
 
 	for i := 0; i < m; i++ {
 		STimesP := MultiplyMatrices(signature.S, P[i])
-		Y[i] = MultiplyMatrices(STimesP, MatrixTranspose(signature.S))
+		YClear := MultiplyMatrices(STimesP, MatrixTranspose(signature.S))
+		Y[i] = createSharesForMatrix(1, YClear)[0]
 	}
 
 	// Create party, due to how code is structured
@@ -78,7 +81,11 @@ func (c *Context) Verify(epk ExpandedPublicKey, message []byte, signature model.
 	c.localComputeY(parties)
 
 	zero := make([]byte, m)
-	return bytes.Equal(parties[0].LittleY, zero)
+	y := make([]byte, m)
+	for i, share := range parties[0].LittleY.shares {
+		y[i] = share[0]
+	}
+	return bytes.Equal(y, zero)
 }
 
 func calculateP(P1, P2, P3 [][][]byte) [][][]byte {

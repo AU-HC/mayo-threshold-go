@@ -1,4 +1,4 @@
-package model
+package mpc
 
 type Signature struct {
 	S    [][]byte
@@ -6,7 +6,7 @@ type Signature struct {
 }
 
 type ThresholdSignature struct {
-	S    [][][]byte
+	S    []MatrixShare
 	Salt []byte
 }
 

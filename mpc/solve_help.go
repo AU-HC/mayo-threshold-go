@@ -2,7 +2,6 @@ package mpc
 
 import (
 	"fmt"
-	"mayo-threshold-go/rand"
 	"reflect"
 )
 
@@ -92,12 +91,20 @@ func (c *Context) computeLittleX(parties []*Party) {
 		panic(fmt.Errorf("length of basis is incorrect"))
 	}
 
-	for _, party := range parties {
-		z := make([]byte, t)
-		zVector := rand.Vector(t - s)
+	zShares := createSharesForRandomMatrix(len(parties), t-s, 1)
+	for partyNumber, party := range parties {
+		z := createEmptyMatrixShare(t, 1)
+		zVector := zShares[partyNumber]
 
-		for index, elem := range zVector {
-			z = AddVec(z, MultiplyVecConstant(elem, basis[index]))
+		//for index, elem := range zVector {
+		//	z = AddVec(z, MultiplyVecConstant(elem, basis[index]))
+		//}
+
+		for index := 0; index < len(zVector.shares); index++ {
+			shareElem := zVector.shares[index][0]
+			//gammaElem := zVector.gammas[index][0]
+
+			z = AddPublicLeft(vectorToMatrix(MultiplyVecConstant(shareElem, basis[index])), z, partyNumber)
 		}
 
 		party.Z = z
@@ -110,7 +117,7 @@ func (c *Context) computeLittleX(parties []*Party) {
 		ai := c.signTriples.ComputeX1.A[partyNumber]
 		bi := c.signTriples.ComputeX1.B[partyNumber]
 		di := AddMatrixShares(party.AInverse, ai)
-		ei := AddMatrixShares(vectorToMatrix(party.LittleY), bi)
+		ei := AddMatrixShares(party.LittleY, bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
@@ -124,7 +131,7 @@ func (c *Context) computeLittleX(parties []*Party) {
 		ai := c.signTriples.ComputeX2.A[partyNumber]
 		bi := c.signTriples.ComputeX2.B[partyNumber]
 		di := AddMatrixShares(party.S, ai)
-		ei := AddMatrixShares(vectorToMatrix(party.Z), bi)
+		ei := AddMatrixShares(party.Z, bi)
 
 		dShares[partyNumber] = di
 		eShares[partyNumber] = ei
@@ -133,7 +140,7 @@ func (c *Context) computeLittleX(parties []*Party) {
 
 	// [x] = [A^-1] * [b] + [S] * [z]
 	for i, party := range parties {
-		party.LittleX = matrixToVec(AddMatrixShares(AInvTimesB[i], STimesZ[i]))
+		party.LittleX = AddMatrixShares(AInvTimesB[i], STimesZ[i])
 	}
 
 	// CHECK FOR CORRECTNESS
@@ -142,8 +149,8 @@ func (c *Context) computeLittleX(parties []*Party) {
 	YShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		AShares[partyNumber] = party.A
-		XShares[partyNumber] = vectorToMatrix(party.LittleX)
-		YShares[partyNumber] = vectorToMatrix(party.LittleY)
+		XShares[partyNumber] = party.LittleX
+		YShares[partyNumber] = party.LittleY
 	}
 	AOpen, err := c.algo.authenticatedOpenMatrix(AShares)
 	if err != nil {
@@ -157,7 +164,7 @@ func (c *Context) computeLittleX(parties []*Party) {
 
 	YOpen, err := c.algo.authenticatedOpenMatrix(YShares)
 	if err != nil {
-		panic(err)
+		//		panic(err)
 	}
 
 	//p := parties[0]

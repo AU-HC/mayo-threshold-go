@@ -4,24 +4,21 @@ import "go/types"
 
 type Context struct {
 	algo          SecretSharingAlgo
-	n             int
 	f             *Field
 	signTriples   PreprocessedMultiplicationSignTriples
 	keygenTriples PreprocessedMultiplicationKeyGenTriples
 	verifyTriples types.Nil // TODO: Add
 }
 
-func CreateContext(amountOfParties, t int) *Context {
-	if t == amountOfParties {
+func CreateContext(n, t int) *Context {
+	if t == n {
 		return &Context{
-			n:    amountOfParties,
-			algo: &Additive{n: amountOfParties},
+			algo: &Additive{n: n},
 			f:    InitField(),
 		}
 	} else {
 		return &Context{
-			n:    amountOfParties,
-			algo: &Shamir{n: amountOfParties, t: t},
+			algo: &Shamir{n: n, t: t},
 			f:    InitField(),
 		}
 	}

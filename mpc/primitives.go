@@ -23,9 +23,9 @@ func (c *Context) GenerateMultiplicationActiveTriple(r1, c1, r2, c2 int) ActiveT
 	bMatrix := rand.Matrix(r2, c2)
 	cMatrix := MultiplyMatrices(aMatrix, bMatrix)
 
-	aShares := createSharesForMatrix(c.n, aMatrix)
-	bShares := createSharesForMatrix(c.n, bMatrix)
-	cShares := createSharesForMatrix(c.n, cMatrix)
+	aShares := c.algo.createSharesForMatrix(aMatrix)
+	bShares := c.algo.createSharesForMatrix(bMatrix)
+	cShares := c.algo.createSharesForMatrix(cMatrix)
 
 	// Reconstruct aMatrix, bMatrix, c
 	aReconstructed, _ := c.algo.authenticatedOpenMatrix(aShares)

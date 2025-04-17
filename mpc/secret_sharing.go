@@ -1,13 +1,16 @@
 package mpc
 
-import "mayo-threshold-go/rand"
+import (
+	"fmt"
+	"mayo-threshold-go/rand"
+	"reflect"
+)
 
 type SecretSharingAlgo interface {
 	openMatrix(shares [][][]byte) [][]byte
 	authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
-	createSharesForMatrix([][]byte) [][][]byte
-	createSharesForRandomMatrix(rows, cols int) [][][]byte
-	shouldPartyAddConstantShare(partyNumber int) bool
+	createSharesForMatrix([][]byte) []MatrixShare
+	createSharesForRandomMatrix(rows, cols int) []MatrixShare
 }
 
 type Shamir struct {
@@ -15,8 +18,24 @@ type Shamir struct {
 }
 
 func (s *Shamir) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error) {
-	//TODO implement me
-	panic("implement me")
+	parties, rows, cols := len(shares), len(shares[0].shares), len(shares[0].shares[0])
+
+	zero := generateZeroMatrix(rows, cols)
+	sPrime := generateZeroMatrix(rows, cols)
+	for _, share := range shares {
+		AddMatrices(sPrime, share.shares)
+	}
+
+	muShares := make([][][]byte, parties)
+	for i, share := range shares {
+		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
+	}
+	muOpen := s.openMatrix(muShares)
+
+	if !reflect.DeepEqual(zero, muOpen) {
+		return sPrime, fmt.Errorf("mu was not 0")
+	}
+	return sPrime, nil
 }
 
 func (s *Shamir) openMatrix(shares [][][]byte) [][]byte {
@@ -41,8 +60,8 @@ func (s *Shamir) openMatrix(shares [][][]byte) [][]byte {
 	return secretMatrix
 }
 
-func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) [][][]byte {
-	rows, cols := len(secretMatrix), len(secretMatrix[0])
+func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
+	/*rows, cols := len(secretMatrix), len(secretMatrix[0])
 
 	shares := make([][][]byte, s.n)
 	for i := 0; i < s.n; i++ {
@@ -61,15 +80,14 @@ func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) [][][]byte {
 	}
 
 	return shares
+
+	*/
+	return nil
 }
 
-func (s *Shamir) createSharesForRandomMatrix(rows, cols int) [][][]byte {
+func (s *Shamir) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 	randomMatrix := rand.Matrix(rows, cols)
 	return s.createSharesForMatrix(randomMatrix)
-}
-
-func (s *Shamir) shouldPartyAddConstantShare(partyNumber int) bool {
-	return true
 }
 
 type Additive struct {
@@ -77,7 +95,24 @@ type Additive struct {
 }
 
 func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error) {
-	return openMatrix(shares)
+	parties, rows, cols := len(shares), len(shares[0].shares), len(shares[0].shares[0])
+
+	zero := generateZeroMatrix(rows, cols)
+	sPrime := generateZeroMatrix(rows, cols)
+	for _, share := range shares {
+		AddMatrices(sPrime, share.shares)
+	}
+
+	muShares := make([][][]byte, parties)
+	for i, share := range shares {
+		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
+	}
+	muOpen := a.openMatrix(muShares)
+
+	if !reflect.DeepEqual(zero, muOpen) {
+		return sPrime, fmt.Errorf("mu was not 0")
+	}
+	return sPrime, nil
 }
 
 func (a *Additive) openMatrix(shares [][][]byte) [][]byte {
@@ -91,30 +126,36 @@ func (a *Additive) openMatrix(shares [][][]byte) [][]byte {
 	return result
 }
 
-func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) [][][]byte {
+func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 	rows, cols := len(secretMatrix), len(secretMatrix[0])
-	shares := make([][][]byte, a.n)
-	sharesSum := generateZeroMatrix(rows, cols)
+	amountOfParties := a.n
 
-	for i := 0; i < a.n-1; i++ { // sample shares for n-1 parties
-		share := rand.Matrix(rows, cols)
-		shares[i] = share
-		AddMatrices(sharesSum, share)
-	}
-	shares[a.n-1] = AddMatricesNew(sharesSum, secretMatrix)
-
-	return shares
-}
-
-func (a *Additive) createSharesForRandomMatrix(rows, cols int) [][][]byte {
-	shares := make([][][]byte, a.n)
-	for i := 0; i < a.n; i++ {
-		shares[i] = rand.Matrix(rows, cols)
+	matrixShares := make([]MatrixShare, amountOfParties)
+	for i := range matrixShares {
+		matrixShares[i].shares = make([][]byte, rows)
+		matrixShares[i].gammas = make([][]byte, rows)
+		for r := 0; r < rows; r++ {
+			matrixShares[i].shares[r] = make([]byte, cols)
+			matrixShares[i].gammas[r] = make([]byte, cols)
+		}
 	}
 
-	return shares
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			shareParts := generateSharesForElement(amountOfParties, secretMatrix[i][j])
+
+			for l := 0; l < amountOfParties; l++ {
+				matrixShares[l].shares[i][j] = shareParts[l].share
+				matrixShares[l].alpha = shareParts[l].alpha
+				matrixShares[l].gammas[i][j] = shareParts[l].gamma
+			}
+		}
+	}
+
+	return matrixShares
 }
 
-func (a *Additive) shouldPartyAddConstantShare(partyNumber int) bool {
-	return partyNumber == 0
+func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
+	secret := rand.Matrix(rows, cols)
+	return a.createSharesForMatrix(secret)
 }

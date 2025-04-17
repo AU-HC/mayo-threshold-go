@@ -15,7 +15,7 @@ func (c *Context) KeyGen(amountOfParties int) (ExpandedPublicKey, []*Party) {
 	P1 := make([][][]byte, m)
 	P2 := make([][][]byte, m)
 	P3 := make([][][]byte, m)
-	OShares := createSharesForRandomMatrix(amountOfParties, v, o)
+	OShares := c.algo.createSharesForRandomMatrix(v, o)
 	LShares := make([][]MatrixShare, amountOfParties)
 
 	OReconstructed, err := c.algo.authenticatedOpenMatrix(OShares) // FOR CORRECTNESS

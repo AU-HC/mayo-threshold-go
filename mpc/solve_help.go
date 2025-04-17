@@ -9,8 +9,8 @@ func (c *Context) computeT(parties []*Party, iteration int) bool {
 	s := len(parties[0].A.shares)
 	t := len(parties[0].A.shares[0])
 
-	SShares := createSharesForRandomMatrix(len(parties), t, t)
-	RShares := createSharesForRandomMatrix(len(parties), s, s)
+	SShares := c.algo.createSharesForRandomMatrix(t, t)
+	RShares := c.algo.createSharesForRandomMatrix(s, s)
 	for partyNumber, party := range parties {
 		party.S = SShares[partyNumber]
 		party.R = RShares[partyNumber]
@@ -91,7 +91,7 @@ func (c *Context) computeLittleX(parties []*Party) {
 		panic(fmt.Errorf("length of basis is incorrect"))
 	}
 
-	zShares := createSharesForRandomMatrix(len(parties), t-s, 1)
+	zShares := c.algo.createSharesForRandomMatrix(t-s, 1)
 	for partyNumber, party := range parties {
 		z := createEmptyMatrixShare(t, 1)
 		z.alpha = party.LittleY.alpha

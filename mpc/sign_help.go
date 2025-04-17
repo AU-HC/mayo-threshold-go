@@ -9,7 +9,7 @@ func (c *Context) computeM(parties []*Party, message []byte, iteration int) {
 	salt := rand.Coin(len(parties), lambda)
 	t := rand.Shake256(m, message, salt)
 
-	VShares := createSharesForRandomMatrix(len(parties), k, v)
+	VShares := c.algo.createSharesForRandomMatrix(k, v)
 	for i, party := range parties {
 		party.Salt = salt
 		party.V = VShares[i]

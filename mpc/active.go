@@ -17,8 +17,8 @@ type MatrixShare struct {
 
 func createEmptyMatrixShare(rows, cols int) MatrixShare {
 	return MatrixShare{
-		shares: generateZeroMatrix(rows, cols),
 		alpha:  0,
+		shares: generateZeroMatrix(rows, cols),
 		gammas: generateZeroMatrix(rows, cols),
 	}
 }
@@ -76,11 +76,6 @@ func generateSharesForElement(n int, secret byte) []Share {
 	return result
 }
 
-func generateSharesForRandomElement(n int) []Share {
-	secret := rand.SampleFieldElement()
-	return generateSharesForElement(n, secret)
-}
-
 func createSharesForMatrix(n int, secretMatrix [][]byte) []MatrixShare {
 	rows, cols := len(secretMatrix), len(secretMatrix[0])
 
@@ -107,11 +102,6 @@ func createSharesForMatrix(n int, secretMatrix [][]byte) []MatrixShare {
 	}
 
 	return matrixShares
-}
-
-func createSharesForRandomMatrix(n, rows, cols int) []MatrixShare {
-	secret := rand.Matrix(rows, cols)
-	return createSharesForMatrix(n, secret)
 }
 
 func MultiplyMatrixWithConstant(a [][]byte, b byte) [][]byte {

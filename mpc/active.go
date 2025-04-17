@@ -6,6 +6,8 @@ import (
 	"reflect"
 )
 
+const GlobalAlpha = byte(13)
+
 type Share struct {
 	share, alpha, gamma byte
 }
@@ -23,12 +25,10 @@ func createEmptyMatrixShare(rows, cols int) MatrixShare {
 	}
 }
 
-var globalAlpha = byte(13)
-
 func MatrixShareTranspose(m MatrixShare) MatrixShare {
 	return MatrixShare{
-		shares: MatrixTranspose(m.shares),
 		alpha:  m.alpha,
+		shares: MatrixTranspose(m.shares),
 		gammas: MatrixTranspose(m.gammas),
 	}
 }
@@ -52,10 +52,10 @@ func generateSharesForElement(n int, secret byte) []Share {
 		alphaSum ^= alpha
 	}
 	shares[n-1] = secret ^ sharesSum
-	alphas[n-1] = alphaSum ^ globalAlpha
+	alphas[n-1] = alphaSum ^ GlobalAlpha
 
 	// Gamma
-	alphaTimesSecret := field.Gf16Mul(globalAlpha, secret)
+	alphaTimesSecret := field.Gf16Mul(GlobalAlpha, secret)
 	var gammaSum byte
 	for i := 0; i < n-1; i++ {
 		gamma := rand.SampleFieldElement()

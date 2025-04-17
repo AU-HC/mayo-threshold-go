@@ -52,7 +52,7 @@ func (c *Context) SignAPI(message []byte, parties []*Party) Signature {
 	thresholdSignature := c.ThresholdVerifiableSign(message, parties)
 
 	// Recover the signature
-	s, err := c.algo.authenticatedOpenMatrix(thresholdSignature.S)
+	s, err := c.algo.authenticatedOpenMatrix(thresholdSignature.SShares)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +69,7 @@ func (c *Context) Sign(message []byte, parties []*Party) Signature {
 	thresholdSignature := c.ThresholdVerifiableSign(message, parties)
 
 	// Recover the signature
-	s, err := c.algo.authenticatedOpenMatrix(thresholdSignature.S)
+	s, err := c.algo.authenticatedOpenMatrix(thresholdSignature.SShares)
 	if err != nil {
 		panic(err)
 	}

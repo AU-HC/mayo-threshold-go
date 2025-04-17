@@ -6,48 +6,12 @@ import (
 	"reflect"
 )
 
-func (c *Context) GenerateMultiplicationTriples(r1, c1, r2, c2, amount int) []Triple {
-	triples := make([]Triple, amount)
-	for i := 0; i < amount; i++ {
-		triples[i] = c.GenerateMultiplicationTriple(r1, c1, r2, c2)
-	}
-	return triples
-}
-
 func (c *Context) GenerateMultiplicationActiveTriples(r1, c1, r2, c2, amount int) []ActiveTriple {
 	triples := make([]ActiveTriple, amount)
 	for i := 0; i < amount; i++ {
 		triples[i] = c.GenerateMultiplicationActiveTriple(r1, c1, r2, c2)
 	}
 	return triples
-}
-
-func (c *Context) GenerateMultiplicationTriple(r1, c1, r2, c2 int) Triple {
-	if c1 != r2 {
-		panic(fmt.Errorf("dimensions not suitable for matrix multiplication"))
-	}
-
-	aMatrix := rand.Matrix(r1, c1)
-	bMatrix := rand.Matrix(r2, c2)
-	cMatrix := MultiplyMatrices(aMatrix, bMatrix)
-
-	aShares := c.algo.createSharesForMatrix(aMatrix)
-	bShares := c.algo.createSharesForMatrix(bMatrix)
-	cShares := c.algo.createSharesForMatrix(cMatrix)
-
-	// Reconstruct aMatrix, bMatrix, c
-	aReconstructed := c.algo.openMatrix(aShares)
-	bReconstructed := c.algo.openMatrix(bShares)
-	cReconstructed := c.algo.openMatrix(cShares)
-	if !reflect.DeepEqual(cReconstructed, MultiplyMatrices(aReconstructed, bReconstructed)) {
-		panic(fmt.Errorf("c is not the product of aMatrix and bMatrix"))
-	}
-
-	return Triple{
-		A: aShares,
-		B: bShares,
-		C: cShares,
-	}
 }
 
 func (c *Context) GenerateMultiplicationActiveTriple(r1, c1, r2, c2 int) ActiveTriple {
@@ -76,33 +40,6 @@ func (c *Context) GenerateMultiplicationActiveTriple(r1, c1, r2, c2 int) ActiveT
 		B: bShares,
 		C: cShares,
 	}
-}
-
-func (c *Context) multiplicationProtocol(parties []*Party, triple Triple, dShares, eShares [][][]byte) [][][]byte {
-	zShares := make([][][]byte, len(parties))
-
-	d := c.algo.openMatrix(dShares)
-	e := c.algo.openMatrix(eShares)
-
-	for partyNumber := range parties {
-		aTriple := triple.A[partyNumber]
-		bTriple := triple.B[partyNumber]
-		cTriple := triple.C[partyNumber]
-
-		db := MultiplyMatrices(d, bTriple) // d * [bTriple]
-		de := MultiplyMatrices(d, e)       // d * e
-		ae := MultiplyMatrices(aTriple, e) // [aTriple] * e
-		AddMatrices(db, ae)                // d * [bTriple] + [aTriple] * e
-		AddMatrices(db, cTriple)           // d * [bTriple] + [aTriple] * e + [cTriple]
-
-		if c.algo.shouldPartyAddConstantShare(partyNumber) {
-			AddMatrices(db, de) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
-		}
-
-		zShares[partyNumber] = db
-	}
-
-	return zShares
 }
 
 func (c *Context) activeMultiplicationProtocol(parties []*Party, triple ActiveTriple, dShares, eShares []MatrixShare) []MatrixShare {

@@ -114,18 +114,6 @@ func createSharesForRandomMatrix(n, rows, cols int) []MatrixShare {
 	return createSharesForMatrix(n, secret)
 }
 
-func MultiplyMatricesElementWise(a, b [][]byte) [][]byte {
-	rows, cols := len(a), len(a[0])
-	out := make([][]byte, rows)
-	for i := range out {
-		out[i] = make([]byte, cols)
-		for j := 0; j < cols; j++ {
-			out[i][j] = gf16Mul(a[i][j], b[i][j])
-		}
-	}
-	return out
-}
-
 func MultiplyMatrixWithConstant(a [][]byte, b byte) [][]byte {
 	rows, cols := len(a), len(a[0])
 	out := make([][]byte, rows)

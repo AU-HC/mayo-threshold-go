@@ -6,8 +6,8 @@ type Signature struct {
 }
 
 type ThresholdSignature struct {
-	S    []MatrixShare
-	Salt []byte
+	SShares []MatrixShare
+	Salt    []byte
 }
 
 func (sig *Signature) Bytes() []byte {

@@ -18,12 +18,12 @@ func (c *Context) ThresholdVerify(parties []*Party, signature ThresholdSignature
 		eShares := make([][][]byte, len(parties))
 
 		for partyNumber, _ := range parties {
-			STimesP := MultiplyMatrices(signature.S[partyNumber], P[i])
+			STimesP := MultiplyMatrices(signature.SShares[partyNumber], P[i])
 
 			ai := triple.A[partyNumber]
 			bi := triple.B[partyNumber]
 			di := AddMatricesNew(STimesP, ai)
-			ei := AddMatricesNew(MatrixTranspose(signature.S[partyNumber]), bi)
+			ei := AddMatricesNew(MatrixTranspose(signature.SShares[partyNumber]), bi)
 
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei

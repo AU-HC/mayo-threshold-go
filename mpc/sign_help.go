@@ -245,14 +245,14 @@ func (c *Context) computeSignature(parties []*Party) ThresholdSignature {
 	}
 	// CHECK FOR CORRECTNESS
 
-	// [S'] = [V + (OX^T)^T)]
+	// [SShares'] = [V + (OX^T)^T)]
 	SPrimeShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
 		SPrimeShares[partyNumber] = AddMatrixShares(party.V, xTimesOTransposedShares[partyNumber])
 		party.SPrime = SPrimeShares[partyNumber]
 	}
 
-	// Open S' and X
+	// Open SShares' and X
 	SPrimeOpen, err := c.algo.authenticatedOpenMatrix(SPrimeShares)
 	if err != nil {
 		panic(err)
@@ -265,7 +265,7 @@ func (c *Context) computeSignature(parties []*Party) ThresholdSignature {
 
 	// CHECK FOR CORRECTNESS
 	if !reflect.DeepEqual(SPrimeOpen, AddMatricesNew(VOpen, xTimesOTransposedOpen)) {
-		panic("S' != V + XO^T")
+		panic("SShares' != V + XO^T")
 	}
 	if (len(s) * len(s[0])) != (k * n) {
 		panic("signature invalid size")
@@ -278,7 +278,7 @@ func (c *Context) computeSignature(parties []*Party) ThresholdSignature {
 	}
 
 	return ThresholdSignature{
-		S:    signatureShares,
-		Salt: parties[0].Salt,
+		SShares: signatureShares,
+		Salt:    parties[0].Salt,
 	}
 }

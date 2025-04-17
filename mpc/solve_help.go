@@ -16,7 +16,7 @@ func (c *Context) computeT(parties []*Party, iteration int) bool {
 		party.R = RShares[partyNumber]
 	}
 
-	// Compute [A * S] = [A] * [S]
+	// Compute [A * SShares] = [A] * [SShares]
 	dShares := make([]MatrixShare, len(parties))
 	eShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
@@ -30,7 +30,7 @@ func (c *Context) computeT(parties []*Party, iteration int) bool {
 	}
 	ATimesSShares := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeT1[iteration], dShares, eShares)
 
-	// Compute [T] = [R] * [A * S]
+	// Compute [T] = [R] * [A * SShares]
 	dShares = make([]MatrixShare, len(parties))
 	eShares = make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
@@ -122,7 +122,7 @@ func (c *Context) computeLittleX(parties []*Party) {
 	}
 	AInvTimesB := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeX1, dShares, eShares)
 
-	// Compute [S] * [z]
+	// Compute [SShares] * [z]
 	dShares = make([]MatrixShare, len(parties))
 	eShares = make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
@@ -136,7 +136,7 @@ func (c *Context) computeLittleX(parties []*Party) {
 	}
 	STimesZ := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeX2, dShares, eShares)
 
-	// [x] = [A^-1] * [b] + [S] * [z]
+	// [x] = [A^-1] * [b] + [SShares] * [z]
 	for i, party := range parties {
 		party.LittleX = AddMatrixShares(AInvTimesB[i], STimesZ[i])
 	}
@@ -162,14 +162,14 @@ func (c *Context) computeLittleX(parties []*Party) {
 
 	YOpen, err := c.algo.authenticatedOpenMatrix(YShares)
 	if err != nil {
-		//		panic(err)
+		panic(err)
 	}
 
 	//p := parties[0]
 	ATimesX := MultiplyMatrices(AOpen, XOpen)
-	//xd1 := MultiplyMatrices(p.A, AddMatricesNew(MultiplyMatrices(p.AInverse, vectorToMatrix(p.LittleY)), MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
-	//xd2 := AddMatricesNew(MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))), MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
-	//xd3 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))))), MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))))
+	//xd1 := MultiplyMatrices(p.A, AddMatricesNew(MultiplyMatrices(p.AInverse, vectorToMatrix(p.LittleY)), MultiplyMatrices(p.SShares, vectorToMatrix(p.Z))))
+	//xd2 := AddMatricesNew(MultiplyMatrices(p.A, MultiplyMatrices(p.SShares, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))), MultiplyMatrices(p.A, MultiplyMatrices(p.SShares, vectorToMatrix(p.Z))))
+	//xd3 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.SShares, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))))), MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.SShares, vectorToMatrix(p.Z))))))
 	//xd4 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.T, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))), MultiplyMatrices(p.T, vectorToMatrix(p.Z))))
 	//xd5 := MultiplyMatrices(computeRightInverse(p.R), MultiplyMatrices(Identity(s), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))
 	xd6 := YOpen

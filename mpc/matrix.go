@@ -56,24 +56,9 @@ func matrixToVec(A [][]byte) []byte {
 	return result
 }
 
-func matrixify(v []byte, rows, cols int) [][]byte {
-	if len(v) != rows*cols {
-		panic(fmt.Errorf("a does not have the correct dimensions for matrixify"))
-	}
-
-	matrix := make([][]byte, rows)
-	for i := 0; i < rows; i++ {
-		matrix[i] = make([]byte, cols)
-		for j := 0; j < cols; j++ {
-			matrix[i][j] = v[i*cols+j]
-		}
-	}
-	return matrix
-}
-
-func matrixifyActive(v MatrixShare, rows, cols int) MatrixShare {
+func matrixify(v MatrixShare, rows, cols int) MatrixShare {
 	if len(v.shares) != rows*cols || len(v.gammas) != rows*cols {
-		panic(fmt.Errorf("input does not have the correct dimensions for matrixifyActive"))
+		panic(fmt.Errorf("input does not have the correct dimensions for matrixify"))
 	}
 
 	matrix := MatrixShare{

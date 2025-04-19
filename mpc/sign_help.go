@@ -197,7 +197,7 @@ func (c *Context) computeSignature(parties []*Party) ThresholdSignature {
 	dShares := make([]MatrixShare, len(parties))
 	eShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
-		party.X = matrixifyActive(party.LittleX, k, o)
+		party.X = matrixify(party.LittleX, k, o)
 
 		ai := c.signTriples.ComputeSignature.A[partyNumber]
 		bi := c.signTriples.ComputeSignature.B[partyNumber]

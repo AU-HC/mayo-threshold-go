@@ -187,7 +187,7 @@ func (c *Context) localComputeY(parties []*Party) {
 		y.alpha = party.Y[0].alpha
 
 		t := party.LittleT
-		y = AddPublicLeft(vectorToMatrix(t), y, partyNumber)
+		y = c.algo.AddPublicLeft(vectorToMatrix(t), y, partyNumber)
 		party.LittleY = y
 	}
 }

@@ -68,7 +68,7 @@ func (c *Context) activeMultiplicationProtocol(parties []*Party, triple ActiveTr
 
 		// TODO: Only one party should add this share for passive, however the variability is encapsulated in the method
 		// as of right now
-		db = AddPublicLeft(de, db, partyNumber) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
+		db = c.algo.AddPublicLeft(de, db, partyNumber) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
 		zShares[partyNumber] = db
 	}
 

@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-const AmountOfParties = 4
-const Threshold = 4
+const AmountOfParties = 5
+const Threshold = 2
 
 func main() {
 	// Get application flags

@@ -11,20 +11,30 @@ type SecretSharingAlgo interface {
 	authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	createSharesForMatrix([][]byte) []MatrixShare
 	createSharesForRandomMatrix(rows, cols int) []MatrixShare
+	AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare
 }
 
 type Shamir struct {
 	n, t int
 }
 
+func (s *Shamir) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
+	var result MatrixShare
+	result.shares = AddMatricesNew(A, B.shares)
+	result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+	result.alpha = B.alpha
+	return result
+}
+
 func (s *Shamir) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error) {
 	parties, rows, cols := len(shares), len(shares[0].shares), len(shares[0].shares[0])
 
 	zero := generateZeroMatrix(rows, cols)
-	sPrime := generateZeroMatrix(rows, cols)
-	for _, share := range shares {
-		AddMatrices(sPrime, share.shares)
+	sPrimeShares := make([][][]byte, parties)
+	for i, share := range shares {
+		sPrimeShares[i] = share.shares
 	}
+	sPrime := s.openMatrix(sPrimeShares)
 
 	muShares := make([][][]byte, parties)
 	for i, share := range shares {
@@ -61,28 +71,28 @@ func (s *Shamir) openMatrix(shares [][][]byte) [][]byte {
 }
 
 func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
-	/*rows, cols := len(secretMatrix), len(secretMatrix[0])
+	rows, cols := len(secretMatrix), len(secretMatrix[0])
+	amountOfParties, threshold := s.n, s.t
 
-	shares := make([][][]byte, s.n)
+	shares := make([]MatrixShare, s.n)
 	for i := 0; i < s.n; i++ {
-		shares[i] = generateZeroMatrix(rows, cols)
+		shares[i] = createEmptyMatrixShare(rows, cols)
 	}
 
 	for r := 0; r < rows; r++ {
 		for c := 0; c < cols; c++ {
 			secretByte := secretMatrix[r][c]
-			byteShares := createShares(secretByte, s.n, s.t)
+			byteShares := createShares(secretByte, amountOfParties, threshold)
 
-			for partyNumber := 0; partyNumber < s.n; partyNumber++ {
-				shares[partyNumber][r][c] = byteShares[partyNumber]
+			for l := 0; l < amountOfParties; l++ {
+				shares[l].shares[r][c] = byteShares[l].share
+				shares[l].alpha = byteShares[l].alpha
+				shares[l].gammas[r][c] = byteShares[l].gamma
 			}
 		}
 	}
 
 	return shares
-
-	*/
-	return nil
 }
 
 func (s *Shamir) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
@@ -92,6 +102,20 @@ func (s *Shamir) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 
 type Additive struct {
 	n int
+}
+
+func (a *Additive) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
+	var result MatrixShare
+	if partyNumber == 0 {
+		result.shares = AddMatricesNew(A, B.shares)
+		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+		result.alpha = B.alpha
+	} else {
+		result.shares = B.shares
+		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+		result.alpha = B.alpha
+	}
+	return result
 }
 
 func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error) {

@@ -135,7 +135,6 @@ func AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
 		result.alpha = B.alpha
 	}
-
 	return result
 }
 

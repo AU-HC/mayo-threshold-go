@@ -75,13 +75,3 @@ func Matrix(r, c int) [][]byte {
 
 	return result
 }
-
-func Vector(c int) []byte {
-	result := make([]byte, c)
-
-	for i := 0; i < c; i++ {
-		result[i] = SampleFieldElement()
-	}
-
-	return result
-}

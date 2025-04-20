@@ -2,7 +2,6 @@ package mpc
 
 import (
 	"mayo-threshold-go/rand"
-	"reflect"
 )
 
 func (c *Context) KeyGenAPI(amountOfParties int) (ExpandedPublicKey, []*Party) {
@@ -17,11 +16,6 @@ func (c *Context) KeyGen(amountOfParties int) (ExpandedPublicKey, []*Party) {
 	P3 := make([][][]byte, m)
 	OShares := c.algo.createSharesForRandomMatrix(v, o)
 	LShares := make([][]MatrixShare, amountOfParties)
-
-	OReconstructed, err := c.algo.authenticatedOpenMatrix(OShares) // FOR CORRECTNESS
-	if err != nil {
-		panic(err)
-	}
 
 	for i := 0; i < amountOfParties; i++ {
 		LShares[i] = make([]MatrixShare, m)
@@ -38,13 +32,6 @@ func (c *Context) KeyGen(amountOfParties int) (ExpandedPublicKey, []*Party) {
 		P1iTimeOShares := make([]MatrixShare, amountOfParties)
 		for partyNumber, _ := range parties {
 			P1iTimeOShares[partyNumber] = MulPublicLeft(P1[i], OShares[partyNumber])
-		}
-		P1iTimeO, err := c.algo.authenticatedOpenMatrix(P1iTimeOShares)
-		if err != nil {
-			panic(err)
-		}
-		if !reflect.DeepEqual(P1iTimeO, MultiplyMatrices(P1[i], OReconstructed)) {
-			panic("incorrect computation")
 		}
 
 		// Compute [O^T * (P1i * O - P2i)]

@@ -2,7 +2,6 @@ package mpc
 
 import (
 	"fmt"
-	"reflect"
 	"slices"
 )
 
@@ -434,11 +433,6 @@ func computeRightInverse(A [][]byte) [][]byte {
 		for i := 0; i < M; i++ {
 			B[pivotCols[i]][col] = aug[i][N]
 		}
-	}
-
-	// Optional: check A * B == identity
-	if !reflect.DeepEqual(MultiplyMatrices(A, B), identity) {
-		panic("Matrix multiplication check failed; no valid right inverse")
 	}
 
 	return B

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"mayo-threshold-go/model"
 	"mayo-threshold-go/rand"
-	"reflect"
 )
 
 func (c *Context) computeT(parties []*model.Party, iteration int) bool {
@@ -132,31 +131,5 @@ func (c *Context) computeLittleX(parties []*model.Party) {
 	// [x] = [A^-1] * [b] + [S] * [z]
 	for i, party := range parties {
 		party.LittleX = matrixToVec(AddMatricesNew(AInvTimesB[i], STimesZ[i]))
-	}
-
-	// CHECK FOR CORRECTNESS
-	AShares := make([][][]byte, len(parties))
-	XShares := make([][][]byte, len(parties))
-	YShares := make([][][]byte, len(parties))
-	for partyNumber, party := range parties {
-		AShares[partyNumber] = party.A
-		XShares[partyNumber] = vectorToMatrix(party.LittleX)
-		YShares[partyNumber] = vectorToMatrix(party.LittleY)
-	}
-	AOpen := c.algo.openMatrix(AShares)
-	XOpen := c.algo.openMatrix(XShares)
-	YOpen := c.algo.openMatrix(YShares)
-	// CHECK FOR CORRECTNESS
-
-	//p := parties[0]
-	ATimesX := MultiplyMatrices(AOpen, XOpen)
-	//xd1 := MultiplyMatrices(p.A, AddMatricesNew(MultiplyMatrices(p.AInverse, vectorToMatrix(p.LittleY)), MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
-	//xd2 := AddMatricesNew(MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))), MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))
-	//xd3 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))))), MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.S, vectorToMatrix(p.Z))))))
-	//xd4 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.T, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))), MultiplyMatrices(p.T, vectorToMatrix(p.Z))))
-	//xd5 := MultiplyMatrices(computeRightInverse(p.R), MultiplyMatrices(Identity(s), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))
-	xd6 := YOpen
-	if !reflect.DeepEqual(ATimesX, xd6) {
-		panic("solve did not find a correct solution")
 	}
 }

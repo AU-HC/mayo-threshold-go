@@ -3,7 +3,6 @@ package mpc
 import (
 	"mayo-threshold-go/model"
 	"mayo-threshold-go/rand"
-	"reflect"
 )
 
 func (c *Context) computeM(parties []*model.Party, message []byte, iteration int) {
@@ -47,21 +46,6 @@ func (c *Context) computeM(parties []*model.Party, message []byte, iteration int
 		for partyNumber, party := range parties {
 			party.M[i] = zShares[partyNumber]
 		}
-
-		// CHECK FOR CORRECTNESS
-		MShares := make([][][]byte, len(parties))
-		LShares := make([][][]byte, len(parties))
-		for partyNumber, party := range parties {
-			MShares[partyNumber] = party.M[i]
-			LShares[partyNumber] = party.EskShare.L[i]
-		}
-		MOpen := c.algo.openMatrix(MShares)
-		LOpen := c.algo.openMatrix(LShares)
-
-		if !reflect.DeepEqual(MOpen, MultiplyMatrices(VOpen, LOpen)) {
-			panic("M is not equal to V * L")
-		}
-		// CHECK FOR CORRECTNESS
 	}
 }
 
@@ -86,18 +70,6 @@ func (c *Context) computeY(parties []*model.Party, iteration int) {
 		for partyNumber, party := range parties {
 			party.Y[i] = zShares[partyNumber]
 		}
-
-		// CHECK FOR CORRECTNESS
-		YShares := make([][][]byte, len(parties))
-		for partyNumber, party := range parties {
-			YShares[partyNumber] = party.Y[i]
-		}
-		YOpen := c.algo.openMatrix(YShares)
-		if !reflect.DeepEqual(YOpen, MultiplyMatrices(MultiplyMatrices(parties[0].VReconstructed,
-			parties[0].Epk.P1[i]), MatrixTranspose(parties[0].VReconstructed))) {
-			panic("Y is not equal to V * P1 * V^T")
-		}
-		// CHECK FOR CORRECTNESS
 	}
 }
 
@@ -195,27 +167,6 @@ func (c *Context) computeSignature(parties []*model.Party) model.ThresholdSignat
 	// Open d, e and compute locally
 	xTimesOTransposedShares := c.multiplicationProtocol(parties, c.signTriples.ComputeSignature, dShares, eShares)
 
-	// CHECK FOR CORRECTNESS
-	xTimesOTransposedOpen := c.algo.openMatrix(xTimesOTransposedShares)
-	XShares := make([][][]byte, len(parties))
-	OShares := make([][][]byte, len(parties))
-	VShares := make([][][]byte, len(parties))
-	for partyNumber, party := range parties {
-		XShares[partyNumber] = party.X
-		OShares[partyNumber] = party.EskShare.O
-		VShares[partyNumber] = party.V
-	}
-	XOpen := c.algo.openMatrix(XShares)
-	OOpen := c.algo.openMatrix(OShares)
-	VOpen := c.algo.openMatrix(VShares)
-	if !reflect.DeepEqual(xTimesOTransposedOpen, MultiplyMatrices(XOpen, MatrixTranspose(OOpen))) {
-		panic("XO^T != X * O^T")
-	}
-	if !reflect.DeepEqual(xTimesOTransposedOpen, MatrixTranspose(MultiplyMatrices(OOpen, MatrixTranspose(XOpen)))) {
-		panic("XO^T != (OX^T)^T")
-	}
-	// CHECK FOR CORRECTNESS
-
 	// [S'] = [V + (OX^T)^T)]
 	SPrimeShares := make([][][]byte, len(parties))
 	for partyNumber, party := range parties {
@@ -223,26 +174,9 @@ func (c *Context) computeSignature(parties []*model.Party) model.ThresholdSignat
 		party.SPrime = SPrimeShares[partyNumber]
 	}
 
-	// Open S' and X
-	SPrimeOpen := c.algo.openMatrix(SPrimeShares)
-
-	s := appendMatrixHorizontal(SPrimeOpen, XOpen)
-	for _, party := range parties {
-		party.Signature = appendMatrixHorizontal(party.SPrime, party.X)
-	}
-
-	// CHECK FOR CORRECTNESS
-	if !reflect.DeepEqual(SPrimeOpen, AddMatricesNew(VOpen, xTimesOTransposedOpen)) {
-		panic("S' != V + XO^T")
-	}
-	if (len(s) * len(s[0])) != (k * n) {
-		panic("signature invalid size")
-	}
-	// CHECK FOR CORRECTNESS
-
 	signatureShares := make([][][]byte, len(parties))
 	for i, party := range parties {
-		signatureShares[i] = party.Signature
+		signatureShares[i] = appendMatrixHorizontal(party.SPrime, party.X)
 	}
 
 	return model.ThresholdSignature{

@@ -3,7 +3,6 @@ package mpc
 import (
 	"mayo-threshold-go/model"
 	"mayo-threshold-go/rand"
-	"reflect"
 )
 
 func (c *Context) KeyGenAPI(amountOfParties int) (model.ExpandedPublicKey, []*model.Party) {
@@ -18,8 +17,6 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 	P3 := make([][][]byte, m)
 	OShares := c.algo.createSharesForRandomMatrix(v, o)
 	LShares := make([][][][]byte, amountOfParties)
-
-	OReconstructed := c.algo.openMatrix(OShares) // FOR CORRECTNESS
 
 	for i := 0; i < amountOfParties; i++ {
 		LShares[i] = make([][][]byte, m)
@@ -36,9 +33,6 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 		P1iTimeOShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
 			P1iTimeOShares[partyNumber] = MultiplyMatrices(P1[i], OShares[partyNumber])
-		}
-		if !reflect.DeepEqual(c.algo.openMatrix(P1iTimeOShares), MultiplyMatrices(P1[i], OReconstructed)) {
-			panic("incorrect computation")
 		}
 
 		// Compute [O^T * (P1i * O - P2i)]
@@ -59,13 +53,6 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 			eShares[partyNumber] = ei
 		}
 		step4Shares := c.multiplicationProtocol(parties, c.keygenTriples.TriplesStep4[i], dShares, eShares)
-
-		// CHECK FOR CORRECTNESS
-		Step4Reconstructed := c.algo.openMatrix(step4Shares)
-		if !reflect.DeepEqual(Step4Reconstructed, MultiplyMatrices(MatrixTranspose(OReconstructed), AddMatricesNew(MultiplyMatrices(P1[i], OReconstructed), P2[i]))) {
-			panic("Step4 is not equal to O^T * (P1i * O - P2i)")
-		}
-		// CHECK FOR CORRECTNESS
 
 		// Compute Upper of P3i
 		P3iShares := make([][][]byte, amountOfParties)
@@ -90,13 +77,6 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 		for partyNumber, _ := range parties {
 			LShares[partyNumber][i] = LiShares[partyNumber]
 		}
-
-		// CHECK FOR CORRECTNESS
-		Li := c.algo.openMatrix(LiShares)
-		if !reflect.DeepEqual(Li, AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OReconstructed), P2[i])) {
-			panic("Li is not equal to (P1i + P1i^T) * O + P2i")
-		}
-		// CHECK FOR CORRECTNESS
 	}
 
 	// Generate the models for the expanded public key / expanded secret key

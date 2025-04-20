@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"mayo-threshold-go/model"
 	"mayo-threshold-go/rand"
-	"reflect"
 )
 
 func (c *Context) GenerateMultiplicationTriples(r1, c1, r2, c2, amount int) []model.Triple {
@@ -27,14 +26,6 @@ func (c *Context) GenerateMultiplicationTriple(r1, c1, r2, c2 int) model.Triple 
 	aShares := c.algo.createSharesForMatrix(aMatrix)
 	bShares := c.algo.createSharesForMatrix(bMatrix)
 	cShares := c.algo.createSharesForMatrix(cMatrix)
-
-	// Reconstruct aMatrix, bMatrix, c
-	aReconstructed := c.algo.openMatrix(aShares)
-	bReconstructed := c.algo.openMatrix(bShares)
-	cReconstructed := c.algo.openMatrix(cShares)
-	if !reflect.DeepEqual(cReconstructed, MultiplyMatrices(aReconstructed, bReconstructed)) {
-		panic(fmt.Errorf("c is not the product of aMatrix and bMatrix"))
-	}
 
 	return model.Triple{
 		A: aShares,

@@ -3,7 +3,6 @@ package mpc
 import (
 	"fmt"
 	"mayo-threshold-go/rand"
-	"reflect"
 )
 
 func (c *Context) GenerateMultiplicationActiveTriples(r1, c1, r2, c2, amount int) []ActiveTriple {
@@ -26,14 +25,6 @@ func (c *Context) GenerateMultiplicationActiveTriple(r1, c1, r2, c2 int) ActiveT
 	aShares := c.algo.createSharesForMatrix(aMatrix)
 	bShares := c.algo.createSharesForMatrix(bMatrix)
 	cShares := c.algo.createSharesForMatrix(cMatrix)
-
-	// Reconstruct aMatrix, bMatrix, c
-	aReconstructed, _ := c.algo.authenticatedOpenMatrix(aShares)
-	bReconstructed, _ := c.algo.authenticatedOpenMatrix(bShares)
-	cReconstructed, _ := c.algo.authenticatedOpenMatrix(cShares)
-	if !reflect.DeepEqual(cReconstructed, MultiplyMatrices(aReconstructed, bReconstructed)) {
-		panic(fmt.Errorf("c is not the product of aMatrix and bMatrix"))
-	}
 
 	return ActiveTriple{
 		A: aShares,
@@ -66,8 +57,6 @@ func (c *Context) activeMultiplicationProtocol(parties []*Party, triple ActiveTr
 		db = AddMatrixShares(db, ae)      // d * [bTriple] + [aTriple] * e
 		db = AddMatrixShares(db, cTriple) // d * [bTriple] + [aTriple] * e + [cTriple]
 
-		// TODO: Only one party should add this share for passive, however the variability is encapsulated in the method
-		// as of right now
 		db = c.algo.AddPublicLeft(de, db, partyNumber) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
 		zShares[partyNumber] = db
 	}

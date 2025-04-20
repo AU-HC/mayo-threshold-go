@@ -61,16 +61,6 @@ func (c *Context) KeyGen(amountOfParties int) (ExpandedPublicKey, []*Party) {
 		}
 		step4Shares := c.activeMultiplicationProtocol(parties, c.keygenTriples.TriplesStep4[i], dShares, eShares)
 
-		// CHECK FOR CORRECTNESS
-		Step4Reconstructed, err := c.algo.authenticatedOpenMatrix(step4Shares)
-		if err != nil {
-			panic(err)
-		}
-		if !reflect.DeepEqual(Step4Reconstructed, MultiplyMatrices(MatrixTranspose(OReconstructed), AddMatricesNew(MultiplyMatrices(P1[i], OReconstructed), P2[i]))) {
-			panic("Step4 is not equal to O^T * (P1i * O - P2i)")
-		}
-		// CHECK FOR CORRECTNESS
-
 		// Compute Upper of P3i
 		P3iShares := make([]MatrixShare, amountOfParties)
 		for partyNumber, _ := range parties {
@@ -94,16 +84,6 @@ func (c *Context) KeyGen(amountOfParties int) (ExpandedPublicKey, []*Party) {
 		for partyNumber, _ := range parties {
 			LShares[partyNumber][i] = LiShares[partyNumber]
 		}
-
-		// CHECK FOR CORRECTNESS
-		Li, err := c.algo.authenticatedOpenMatrix(LiShares)
-		if err != nil {
-			panic(err)
-		}
-		if !reflect.DeepEqual(Li, AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OReconstructed), P2[i])) {
-			panic("Li is not equal to (P1i + P1i^T) * O + P2i")
-		}
-		// CHECK FOR CORRECTNESS
 	}
 
 	// Generate the models for the expanded public key / expanded secret key

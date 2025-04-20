@@ -2,7 +2,6 @@ package mpc
 
 import (
 	"fmt"
-	"reflect"
 )
 
 func (c *Context) computeT(parties []*Party, iteration int) bool {
@@ -140,41 +139,4 @@ func (c *Context) computeLittleX(parties []*Party) {
 	for i, party := range parties {
 		party.LittleX = AddMatrixShares(AInvTimesB[i], STimesZ[i])
 	}
-
-	// CHECK FOR CORRECTNESS
-	AShares := make([]MatrixShare, len(parties))
-	XShares := make([]MatrixShare, len(parties))
-	YShares := make([]MatrixShare, len(parties))
-	for partyNumber, party := range parties {
-		AShares[partyNumber] = party.A
-		XShares[partyNumber] = party.LittleX
-		YShares[partyNumber] = party.LittleY
-	}
-	AOpen, err := c.algo.authenticatedOpenMatrix(AShares)
-	if err != nil {
-		panic(err)
-	}
-
-	XOpen, err := c.algo.authenticatedOpenMatrix(XShares)
-	if err != nil {
-		panic(err)
-	}
-
-	YOpen, err := c.algo.authenticatedOpenMatrix(YShares)
-	if err != nil {
-		panic(err)
-	}
-
-	//p := parties[0]
-	ATimesX := MultiplyMatrices(AOpen, XOpen)
-	//xd1 := MultiplyMatrices(p.A, AddMatricesNew(MultiplyMatrices(p.AInverse, vectorToMatrix(p.LittleY)), MultiplyMatrices(p.SShares, vectorToMatrix(p.Z))))
-	//xd2 := AddMatricesNew(MultiplyMatrices(p.A, MultiplyMatrices(p.SShares, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))), MultiplyMatrices(p.A, MultiplyMatrices(p.SShares, vectorToMatrix(p.Z))))
-	//xd3 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.SShares, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))))), MultiplyMatrices(p.R, MultiplyMatrices(p.A, MultiplyMatrices(p.SShares, vectorToMatrix(p.Z))))))
-	//xd4 := MultiplyMatrices(computeRightInverse(p.R), AddMatricesNew(MultiplyMatrices(p.T, MultiplyMatrices(computeRightInverse(p.T), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY)))), MultiplyMatrices(p.T, vectorToMatrix(p.Z))))
-	//xd5 := MultiplyMatrices(computeRightInverse(p.R), MultiplyMatrices(Identity(s), MultiplyMatrices(p.R, vectorToMatrix(p.LittleY))))
-	xd6 := YOpen
-	if !reflect.DeepEqual(ATimesX, xd6) {
-		panic("solve did not find a correct solution")
-	}
-	// CHECK FOR CORRECTNESS
 }

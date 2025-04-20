@@ -2,7 +2,6 @@ package mpc
 
 import (
 	"mayo-threshold-go/rand"
-	"reflect"
 )
 
 func (c *Context) computeM(parties []*Party, message []byte, iteration int) {
@@ -45,26 +44,6 @@ func (c *Context) computeM(parties []*Party, message []byte, iteration int) {
 		for partyNumber, party := range parties {
 			party.M[i] = zShares[partyNumber]
 		}
-
-		// CHECK FOR CORRECTNESS
-		MShares := make([]MatrixShare, len(parties))
-		LShares := make([]MatrixShare, len(parties))
-		for partyNumber, party := range parties {
-			MShares[partyNumber] = party.M[i]
-			LShares[partyNumber] = party.EskShare.L[i]
-		}
-		MOpen, err := c.algo.authenticatedOpenMatrix(MShares)
-		if err != nil {
-			panic(err)
-		}
-		LOpen, err := c.algo.authenticatedOpenMatrix(LShares)
-		if err != nil {
-			panic(err)
-		}
-		if !reflect.DeepEqual(MOpen, MultiplyMatrices(VOpen, LOpen)) {
-			panic("M is not equal to V * L")
-		}
-		// CHECK FOR CORRECTNESS
 	}
 }
 
@@ -89,21 +68,6 @@ func (c *Context) computeY(parties []*Party, iteration int) {
 		for partyNumber, party := range parties {
 			party.Y[i] = zShares[partyNumber]
 		}
-
-		// CHECK FOR CORRECTNESS
-		YShares := make([]MatrixShare, len(parties))
-		for partyNumber, party := range parties {
-			YShares[partyNumber] = party.Y[i]
-		}
-		YOpen, err := c.algo.authenticatedOpenMatrix(YShares)
-		if err != nil {
-			panic(err)
-		}
-		if !reflect.DeepEqual(YOpen, MultiplyMatrices(MultiplyMatrices(parties[0].VReconstructed,
-			parties[0].Epk.P1[i]), MatrixTranspose(parties[0].VReconstructed))) {
-			panic("Y is not equal to V * P1 * V^T")
-		}
-		// CHECK FOR CORRECTNESS
 	}
 }
 
@@ -211,40 +175,6 @@ func (c *Context) computeSignature(parties []*Party) ThresholdSignature {
 	// Open d, e and compute locally
 	xTimesOTransposedShares := c.activeMultiplicationProtocol(parties, c.signTriples.ComputeSignature, dShares, eShares)
 
-	// CHECK FOR CORRECTNESS
-	xTimesOTransposedOpen, err := c.algo.authenticatedOpenMatrix(xTimesOTransposedShares)
-	if err != nil {
-		panic(err)
-	}
-
-	XShares := make([]MatrixShare, len(parties))
-	OShares := make([]MatrixShare, len(parties))
-	VShares := make([]MatrixShare, len(parties))
-	for partyNumber, party := range parties {
-		XShares[partyNumber] = party.X
-		OShares[partyNumber] = party.EskShare.O
-		VShares[partyNumber] = party.V
-	}
-	XOpen, err := c.algo.authenticatedOpenMatrix(XShares)
-	if err != nil {
-		panic(err)
-	}
-	OOpen, err := c.algo.authenticatedOpenMatrix(OShares)
-	if err != nil {
-		panic(err)
-	}
-	VOpen, err := c.algo.authenticatedOpenMatrix(VShares)
-	if err != nil {
-		panic(err)
-	}
-	if !reflect.DeepEqual(xTimesOTransposedOpen, MultiplyMatrices(XOpen, MatrixTranspose(OOpen))) {
-		panic("XO^T != X * O^T")
-	}
-	if !reflect.DeepEqual(xTimesOTransposedOpen, MatrixTranspose(MultiplyMatrices(OOpen, MatrixTranspose(XOpen)))) {
-		panic("XO^T != (OX^T)^T")
-	}
-	// CHECK FOR CORRECTNESS
-
 	// [SShares'] = [V + (OX^T)^T)]
 	SPrimeShares := make([]MatrixShare, len(parties))
 	for partyNumber, party := range parties {
@@ -252,25 +182,9 @@ func (c *Context) computeSignature(parties []*Party) ThresholdSignature {
 		party.SPrime = SPrimeShares[partyNumber]
 	}
 
-	// Open SShares' and X
-	SPrimeOpen, err := c.algo.authenticatedOpenMatrix(SPrimeShares)
-	if err != nil {
-		panic(err)
-	}
-
-	s := appendMatrixHorizontal(SPrimeOpen, XOpen)
 	for _, party := range parties {
 		party.Signature = appendMatrixShareHorizontal(party.SPrime, party.X)
 	}
-
-	// CHECK FOR CORRECTNESS
-	if !reflect.DeepEqual(SPrimeOpen, AddMatricesNew(VOpen, xTimesOTransposedOpen)) {
-		panic("SShares' != V + XO^T")
-	}
-	if (len(s) * len(s[0])) != (k * n) {
-		panic("signature invalid size")
-	}
-	// CHECK FOR CORRECTNESS
 
 	signatureShares := make([]MatrixShare, len(parties))
 	for i, party := range parties {

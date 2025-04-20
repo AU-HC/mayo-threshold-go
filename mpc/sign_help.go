@@ -182,13 +182,9 @@ func (c *Context) computeSignature(parties []*Party) ThresholdSignature {
 		party.SPrime = SPrimeShares[partyNumber]
 	}
 
-	for _, party := range parties {
-		party.Signature = appendMatrixShareHorizontal(party.SPrime, party.X)
-	}
-
 	signatureShares := make([]MatrixShare, len(parties))
 	for i, party := range parties {
-		signatureShares[i] = party.Signature
+		signatureShares[i] = appendMatrixShareHorizontal(party.SPrime, party.X)
 	}
 
 	return ThresholdSignature{

@@ -17,7 +17,6 @@ type Party struct {
 	S              MatrixShare
 	SPrime         MatrixShare
 	X              MatrixShare
-	Signature      MatrixShare
 	M              []MatrixShare
 	Y              []MatrixShare
 }

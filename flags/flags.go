@@ -13,9 +13,9 @@ func GetApplicationArguments() ApplicationArguments {
 	// Getting arguments from flags
 	flag.IntVar(&arguments.AmountBenchmarkingSamples, "b", 0,
 		"Decides if the implementation should be benchmarked, and the amount of samples")
-	flag.IntVar(&arguments.NumberOfParties, "NumberOfParties", 3,
+	flag.IntVar(&arguments.NumberOfParties, "n", 3,
 		"Decides how many parties should participate in generating the signature")
-	flag.IntVar(&arguments.Threshold, "Threshold", 3,
+	flag.IntVar(&arguments.Threshold, "t", 3,
 		"Decides the Threshold of the secret sharing algorithm. If Threshold < NumberOfParties Shamir will be used")
 
 	// Parsing flags

@@ -10,7 +10,7 @@ import (
 const directory = "results"
 const fileName = "results.json"
 
-var amountOfPartiesToBenchmark = []int{2, 4, 8, 16, 32, 64}
+var amountOfPartiesToBenchmark = []int{3, 5, 10, 15}
 
 type Result struct {
 	AmountOfParties           int                       `json:"AmountOfParties"`

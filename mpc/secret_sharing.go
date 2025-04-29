@@ -40,6 +40,12 @@ func (s *Shamir) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	for i, share := range shares {
 		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
 	}
+
+	err := commitAndVerify(muShares)
+	if err != nil {
+		return nil, err
+	}
+
 	muOpen := s.openMatrix(muShares)
 
 	if !reflect.DeepEqual(zero, muOpen) {
@@ -131,6 +137,12 @@ func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, erro
 	for i, share := range shares {
 		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
 	}
+
+	err := commitAndVerify(muShares)
+	if err != nil {
+		return nil, err
+	}
+
 	muOpen := a.openMatrix(muShares)
 
 	if !reflect.DeepEqual(zero, muOpen) {
@@ -182,4 +194,36 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 	secret := rand.Matrix(rows, cols)
 	return a.createSharesForMatrix(secret)
+}
+
+func commitAndVerify(shares [][][]byte) error {
+	parties, rows, cols := len(shares), len(shares[0]), len(shares[0][0])
+
+	// Create commitments
+	commitmentRandomness := make([][][]byte, parties)
+	commitments := make([][][][]byte, parties)
+	for p := 0; p < parties; p++ {
+		commitments[p] = make([][][]byte, rows)
+		commitmentRandomness[p] = rand.Matrix(rows, cols)
+		for r := 0; r < rows; r++ {
+			commitments[p][r] = make([][]byte, cols)
+			for c := 0; c < cols; c++ {
+				commitments[p][r][c] = Commit(shares[p][r][c], commitmentRandomness[p][r][c])
+			}
+		}
+	}
+
+	// Check commitments
+	for p := 0; p < parties; p++ {
+		for r := 0; r < rows; r++ {
+			for c := 0; c < cols; c++ {
+				isValid := VerifyCommitment(shares[p][r][c], commitmentRandomness[p][r][c], commitments[p][r][c])
+				if !isValid {
+					return fmt.Errorf("commitment verification failed")
+				}
+			}
+		}
+	}
+
+	return nil
 }

@@ -2,6 +2,7 @@ package mpc
 
 import (
 	"fmt"
+	random "math/rand"
 	"mayo-threshold-go/rand"
 	"reflect"
 )
@@ -197,31 +198,27 @@ func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 }
 
 func commitAndVerify(shares [][][]byte) error {
-	parties, rows, cols := len(shares), len(shares[0]), len(shares[0][0])
+	parties := len(shares)
 
 	// Create commitments
-	commitmentRandomness := make([][][]byte, parties)
-	commitments := make([][][][]byte, parties)
+	commitmentRandomness := make([][]byte, parties)
+	commitments := make([][]byte, parties)
 	for p := 0; p < parties; p++ {
-		commitments[p] = make([][][]byte, rows)
-		commitmentRandomness[p] = rand.Matrix(rows, cols)
-		for r := 0; r < rows; r++ {
-			commitments[p][r] = make([][]byte, cols)
-			for c := 0; c < cols; c++ {
-				commitments[p][r][c] = Commit(shares[p][r][c], commitmentRandomness[p][r][c])
-			}
+		randomVector := make([]byte, 32)
+
+		for i := 0; i < len(randomVector); i++ {
+			randomVector[i] = byte(random.Int())
 		}
+
+		commitmentRandomness[p] = randomVector
+		commitments[p] = Commit(shares[p], commitmentRandomness[p])
 	}
 
 	// Check commitments
 	for p := 0; p < parties; p++ {
-		for r := 0; r < rows; r++ {
-			for c := 0; c < cols; c++ {
-				isValid := VerifyCommitment(shares[p][r][c], commitmentRandomness[p][r][c], commitments[p][r][c])
-				if !isValid {
-					return fmt.Errorf("commitment verification failed")
-				}
-			}
+		isValid := VerifyCommitment(shares[p], commitmentRandomness[p], commitments[p])
+		if !isValid {
+			return fmt.Errorf("commitment verification failed")
 		}
 	}
 

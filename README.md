@@ -30,3 +30,8 @@ Note that the following flags can be set:
 - `-n` (int): Total number of parties participating in the threshold signature scheme.
 - `-t` (int): Threshold number of parties required to generate a valid signature. 
 - `-b` (int): Optional. Number of benchmark iterations to run.
+
+## Remarks
+- This is a prototype implementation of the threshold construction based on the referenced paper.
+- The current focus is correctness and clarity, not optimization.
+- For a version that includes active security protections, see the active-security branch.

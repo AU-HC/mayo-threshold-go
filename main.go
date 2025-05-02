@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"mayo-threshold-go/flags"
-	"mayo-threshold-go/model"
 	"mayo-threshold-go/mpc"
 	"time"
 )
@@ -34,10 +33,7 @@ func main() {
 
 	// Threshold sign message
 	before = time.Now()
-	var sig model.Signature
-	for i := 0; i < 1000; i++ {
-		sig = context.SignAPI(message, parties)
-	}
+	sig := context.SignAPI(message, parties)
 	fmt.Println(fmt.Sprintf("Signing with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Verify message

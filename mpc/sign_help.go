@@ -76,10 +76,10 @@ func (c *Context) localComputeA(parties []*Party) {
 		A := createEmptyMatrixShare(m+shifts, k*o)
 		ell := 0
 		MHatShares := make([][][]byte, k)
-		MHatGammas := make([][][]byte, k)
+		MHatGammas := make([][][]uint64, k)
 		for index := 0; index < k; index++ {
-			MHatShares[index] = generateZeroMatrix(m, o)
-			MHatGammas[index] = generateZeroMatrix(m, o)
+			MHatShares[index] = generateZeroMatrix[byte](m, o)
+			MHatGammas[index] = generateZeroMatrix[uint64](m, o)
 		}
 
 		for t := 0; t < k; t++ {
@@ -110,7 +110,7 @@ func (c *Context) localComputeA(parties []*Party) {
 		}
 
 		A.shares = reduceAModF(A.shares)
-		A.gammas = reduceAModF(A.gammas)
+		// A.gammas = reduceAModF(A.gammas)
 		A.alpha = party.M[0].alpha
 		party.A = A
 	}
@@ -124,7 +124,7 @@ func (c *Context) localComputeY(parties []*Party) {
 		for j := 0; j < k; j++ {
 			for t := k - 1; t >= j; t-- {
 				uShares := make([]byte, m)
-				uGammas := make([]byte, m)
+				uGammas := make([]uint64, m)
 				if j == t {
 					for a := 0; a < m; a++ {
 						uShares[a] = party.Y[a].shares[j][j]
@@ -147,7 +147,7 @@ func (c *Context) localComputeY(parties []*Party) {
 		}
 
 		y.shares = vectorToMatrix(reduceVecModF(matrixToVec(y.shares)))
-		y.gammas = vectorToMatrix(reduceVecModF(matrixToVec(y.gammas)))
+		// y.gammas = vectorToMatrix(reduceVecModF(matrixToVec(y.gammas)))
 		y.alpha = party.Y[0].alpha
 
 		t := party.LittleT

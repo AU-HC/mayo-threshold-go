@@ -8,17 +8,11 @@ import (
 func SampleFieldElement() byte {
 	randomInt := rand.Int()
 	return byte(randomInt) & 0xf
+}
 
-	/*
-		buf := make([]byte, 1) // TODO: Use crypto/rand when done
-
-		_, err := rand.Read(buf)
-		if err != nil {
-			panic(err)
-		}
-
-		return buf[0] & 0xf
-	*/
+func SampleExtensionFieldElement() uint64 {
+	randomInt := rand.Int()
+	return uint64(randomInt) & 0xfffffff
 }
 
 func Shake256(outputLength int, inputs ...[]byte) []byte {

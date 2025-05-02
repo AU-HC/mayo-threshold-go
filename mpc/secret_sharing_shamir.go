@@ -1,5 +1,6 @@
 package mpc
 
+/*
 import (
 	"mayo-threshold-go/rand"
 )
@@ -21,8 +22,8 @@ func createShares(secret byte, n, t int) []Share {
 	gammaCoefficients := generateCoefficients(field.Gf16Mul(secret, GlobalAlpha), t)
 
 	shares := make([]byte, n)
-	alphaShares := make([]byte, n)
-	gammaShares := make([]byte, n)
+	alphaShares := make([]uint64, n)
+	gammaShares := make([]uint64, n)
 
 	for x := 1; x <= n; x++ {
 		y := shareCoefficients[len(shareCoefficients)-1]
@@ -87,3 +88,4 @@ func reconstructSecret(shares []byte, t int) byte {
 
 	return secret
 }
+*/

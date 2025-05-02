@@ -2,13 +2,13 @@ package mpc
 
 import (
 	"fmt"
-	random "math/rand"
 	"mayo-threshold-go/rand"
 	"reflect"
 )
 
 type SecretSharingAlgo interface {
 	openMatrix(shares [][][]byte) [][]byte
+	openMatrixExtension(shares [][][]uint64) [][]uint64
 	authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	createSharesForMatrix([][]byte) []MatrixShare
 	createSharesForRandomMatrix(rows, cols int) []MatrixShare
@@ -19,6 +19,7 @@ type Shamir struct {
 	n, t int
 }
 
+/*
 func (s *Shamir) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
 	result.shares = AddMatricesNew(A, B.shares)
@@ -105,7 +106,7 @@ func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 func (s *Shamir) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 	randomMatrix := rand.Matrix(rows, cols)
 	return s.createSharesForMatrix(randomMatrix)
-}
+}*/
 
 type Additive struct {
 	n int
@@ -115,11 +116,11 @@ func (a *Additive) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) Mat
 	var result MatrixShare
 	if partyNumber == 0 {
 		result.shares = AddMatricesNew(A, B.shares)
-		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstantExtension(A, B.alpha))
 		result.alpha = B.alpha
 	} else {
 		result.shares = B.shares
-		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstantExtension(A, B.alpha))
 		result.alpha = B.alpha
 	}
 	return result
@@ -128,23 +129,23 @@ func (a *Additive) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) Mat
 func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error) {
 	parties, rows, cols := len(shares), len(shares[0].shares), len(shares[0].shares[0])
 
-	zero := generateZeroMatrix(rows, cols)
-	sPrime := generateZeroMatrix(rows, cols)
+	zero := generateZeroMatrix[uint64](rows, cols)
+	sPrime := generateZeroMatrix[byte](rows, cols)
 	for _, share := range shares {
 		AddMatrices(sPrime, share.shares)
 	}
 
-	muShares := make([][][]byte, parties)
+	muShares := make([][][]uint64, parties)
 	for i, share := range shares {
-		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
+		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstantExtension(sPrime, share.alpha))
 	}
 
-	err := commitAndVerify(muShares)
+	/*err := commitAndVerify(muShares)
 	if err != nil {
 		return nil, err
-	}
+	}*/
 
-	muOpen := a.openMatrix(muShares)
+	muOpen := a.openMatrixExtension(muShares)
 
 	if !reflect.DeepEqual(zero, muOpen) {
 		return sPrime, fmt.Errorf("mu was not 0")
@@ -154,7 +155,18 @@ func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, erro
 
 func (a *Additive) openMatrix(shares [][][]byte) [][]byte {
 	rows, cols := len(shares[0]), len(shares[0][0])
-	result := generateZeroMatrix(rows, cols)
+	result := generateZeroMatrix[byte](rows, cols)
+
+	for _, share := range shares {
+		AddMatrices(result, share)
+	}
+
+	return result
+}
+
+func (a *Additive) openMatrixExtension(shares [][][]uint64) [][]uint64 {
+	rows, cols := len(shares[0]), len(shares[0][0])
+	result := generateZeroMatrix[uint64](rows, cols)
 
 	for _, share := range shares {
 		AddMatrices(result, share)
@@ -170,10 +182,10 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 	matrixShares := make([]MatrixShare, amountOfParties)
 	for i := range matrixShares {
 		matrixShares[i].shares = make([][]byte, rows)
-		matrixShares[i].gammas = make([][]byte, rows)
+		matrixShares[i].gammas = make([][]uint64, rows)
 		for r := 0; r < rows; r++ {
 			matrixShares[i].shares[r] = make([]byte, cols)
-			matrixShares[i].gammas[r] = make([]byte, cols)
+			matrixShares[i].gammas[r] = make([]uint64, cols)
 		}
 	}
 
@@ -197,17 +209,17 @@ func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 	return a.createSharesForMatrix(secret)
 }
 
-func commitAndVerify(shares [][][]byte) error {
+/*func commitAndVerify(shares [][][]uint64) error {
 	parties := len(shares)
 
 	// Create commitments
-	commitmentRandomness := make([][]byte, parties)
-	commitments := make([][]byte, parties)
+	commitmentRandomness := make([][]uint64, parties)
+	commitments := make([][]uint64, parties)
 	for p := 0; p < parties; p++ {
-		randomVector := make([]byte, 32)
+		randomVector := make([]uint64, 32)
 
 		for i := 0; i < len(randomVector); i++ {
-			randomVector[i] = byte(random.Int())
+			randomVector[i] = uint64(random.Int())
 		}
 
 		commitmentRandomness[p] = randomVector
@@ -223,4 +235,4 @@ func commitAndVerify(shares [][][]byte) error {
 	}
 
 	return nil
-}
+}*/

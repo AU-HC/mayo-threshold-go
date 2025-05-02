@@ -6,22 +6,24 @@ import (
 	"reflect"
 )
 
-const GlobalAlpha = byte(13)
+const GlobalAlpha = uint64(234221)
 
 type Share struct {
-	share, alpha, gamma byte
+	share        byte
+	alpha, gamma uint64
 }
 
 type MatrixShare struct {
-	shares, gammas [][]byte
-	alpha          byte
+	shares [][]byte
+	gammas [][]uint64
+	alpha  uint64
 }
 
 func createEmptyMatrixShare(rows, cols int) MatrixShare {
 	return MatrixShare{
 		alpha:  0,
-		shares: generateZeroMatrix(rows, cols),
-		gammas: generateZeroMatrix(rows, cols),
+		shares: generateZeroMatrix[byte](rows, cols),
+		gammas: generateZeroMatrix[uint64](rows, cols),
 	}
 }
 
@@ -35,11 +37,11 @@ func MatrixShareTranspose(m MatrixShare) MatrixShare {
 
 func generateSharesForElement(n int, secret byte) []Share {
 	shares := make([]byte, n)
-	alphas := make([]byte, n)
-	gammas := make([]byte, n)
+	alphas := make([]uint64, n)
+	gammas := make([]uint64, n)
 
 	var sharesSum byte
-	var alphaSum byte
+	var alphaSum uint64
 	for i := 0; i < n-1; i++ {
 		// shares of the secret
 		share := rand.SampleFieldElement()
@@ -47,7 +49,7 @@ func generateSharesForElement(n int, secret byte) []Share {
 		sharesSum ^= share
 
 		// alpha
-		alpha := rand.SampleFieldElement()
+		alpha := rand.SampleExtensionFieldElement()
 		alphas[i] = alpha
 		alphaSum ^= alpha
 	}
@@ -55,10 +57,10 @@ func generateSharesForElement(n int, secret byte) []Share {
 	alphas[n-1] = alphaSum ^ GlobalAlpha
 
 	// Gamma
-	alphaTimesSecret := field.Gf16Mul(GlobalAlpha, secret)
-	var gammaSum byte
+	alphaTimesSecret := field.Gf64Mul(GlobalAlpha, uint64(secret))
+	var gammaSum uint64
 	for i := 0; i < n-1; i++ {
-		gamma := rand.SampleFieldElement()
+		gamma := rand.SampleExtensionFieldElement()
 		gammas[i] = gamma
 		gammaSum ^= gamma
 	}
@@ -82,10 +84,10 @@ func createSharesForMatrix(n int, secretMatrix [][]byte) []MatrixShare {
 	matrixShares := make([]MatrixShare, n)
 	for i := range matrixShares {
 		matrixShares[i].shares = make([][]byte, rows)
-		matrixShares[i].gammas = make([][]byte, rows)
+		matrixShares[i].gammas = make([][]uint64, rows)
 		for r := 0; r < rows; r++ {
 			matrixShares[i].shares[r] = make([]byte, cols)
-			matrixShares[i].gammas[r] = make([]byte, cols)
+			matrixShares[i].gammas[r] = make([]uint64, cols)
 		}
 	}
 
@@ -116,6 +118,18 @@ func MultiplyMatrixWithConstant(a [][]byte, b byte) [][]byte {
 	return out
 }
 
+func MultiplyMatrixWithConstantExtension(a [][]byte, b uint64) [][]uint64 {
+	rows, cols := len(a), len(a[0])
+	out := make([][]uint64, rows)
+	for i := range out {
+		out[i] = make([]uint64, cols)
+		for j := 0; j < cols; j++ {
+			out[i][j] = gf64Mul(uint64(a[i][j]), b)
+		}
+	}
+	return out
+}
+
 func AddMatrixShares(A, B MatrixShare) MatrixShare {
 	var result MatrixShare
 	result.shares = AddMatricesNew(A.shares, B.shares)
@@ -128,11 +142,11 @@ func AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
 	if partyNumber == 0 {
 		result.shares = AddMatricesNew(A, B.shares)
-		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstantExtension(A, B.alpha))
 		result.alpha = B.alpha
 	} else {
 		result.shares = B.shares
-		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstantExtension(A, B.alpha))
 		result.alpha = B.alpha
 	}
 	return result
@@ -141,7 +155,7 @@ func AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 func MulPublicLeft(A [][]byte, B MatrixShare) MatrixShare {
 	var result MatrixShare
 	result.shares = MultiplyMatrices(A, B.shares)
-	result.gammas = MultiplyMatrices(A, B.gammas)
+	result.gammas = MultiplyMatricesExtension(ConvertMatrixExtensionField(A), B.gammas)
 	result.alpha = B.alpha
 	return result
 }
@@ -149,7 +163,7 @@ func MulPublicLeft(A [][]byte, B MatrixShare) MatrixShare {
 func MulPublicRight(A MatrixShare, B [][]byte) MatrixShare {
 	var result MatrixShare
 	result.shares = MultiplyMatrices(A.shares, B)
-	result.gammas = MultiplyMatrices(A.gammas, B)
+	result.gammas = MultiplyMatricesExtension(A.gammas, ConvertMatrixExtensionField(B))
 	result.alpha = A.alpha
 	return result
 }
@@ -157,18 +171,18 @@ func MulPublicRight(A MatrixShare, B [][]byte) MatrixShare {
 func openMatrix(shares []MatrixShare) ([][]byte, error) {
 	parties, rows, cols := len(shares), len(shares[0].shares), len(shares[0].shares[0])
 
-	zero := generateZeroMatrix(rows, cols)
-	sPrime := generateZeroMatrix(rows, cols)
+	zero := generateZeroMatrix[byte](rows, cols)
+	sPrime := generateZeroMatrix[byte](rows, cols)
 	for _, share := range shares {
 		AddMatrices(sPrime, share.shares)
 	}
 
-	muShares := make([][][]byte, parties)
+	muShares := make([][][]uint64, parties)
 	for i, share := range shares {
-		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
+		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstantExtension(sPrime, share.alpha))
 	}
 
-	muOpen := generateZeroMatrix(rows, cols)
+	muOpen := generateZeroMatrix[uint64](rows, cols)
 	for _, share := range muShares {
 		AddMatrices(muOpen, share)
 	}

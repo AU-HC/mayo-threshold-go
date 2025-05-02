@@ -5,6 +5,10 @@ import (
 	"slices"
 )
 
+type ByteOrInt interface {
+	~byte | ~uint64
+}
+
 // upper transposes the lower triangular part of a matrix to the upper triangular part
 func upper(matrix MatrixShare) MatrixShare {
 	n := len(matrix.shares)
@@ -21,11 +25,11 @@ func upper(matrix MatrixShare) MatrixShare {
 	return matrix
 }
 
-func vectorToMatrix(x []byte) [][]byte {
-	result := make([][]byte, len(x))
+func vectorToMatrix[T ByteOrInt](x []T) [][]T {
+	result := make([][]T, len(x))
 
 	for i, elem := range x {
-		result[i] = []byte{elem}
+		result[i] = []T{elem}
 	}
 
 	return result
@@ -62,13 +66,13 @@ func matrixify(v MatrixShare, rows, cols int) MatrixShare {
 
 	matrix := MatrixShare{
 		shares: make([][]byte, rows),
-		gammas: make([][]byte, rows),
+		gammas: make([][]uint64, rows),
 		alpha:  v.alpha,
 	}
 
 	for i := 0; i < rows; i++ {
 		matrix.shares[i] = make([]byte, cols)
-		matrix.gammas[i] = make([]byte, cols)
+		matrix.gammas[i] = make([]uint64, cols)
 		for j := 0; j < cols; j++ {
 			idx := i*cols + j
 			matrix.shares[i][j] = v.shares[idx][0]
@@ -79,11 +83,11 @@ func matrixify(v MatrixShare, rows, cols int) MatrixShare {
 	return matrix
 }
 
-func generateZeroMatrix(rows, columns int) [][]byte {
-	matrix := make([][]byte, rows)
+func generateZeroMatrix[T any](rows, columns int) [][]T {
+	matrix := make([][]T, rows)
 
 	for i := 0; i < rows; i++ {
-		matrix[i] = make([]byte, columns)
+		matrix[i] = make([]T, columns)
 	}
 
 	return matrix
@@ -100,7 +104,18 @@ func generateIdentityMatrix(dimension int) [][]byte {
 	return matrix
 }
 
-func AddMatrices(a, b [][]byte) {
+func ConvertMatrixExtensionField(a [][]byte) [][]uint64 {
+	res := make([][]uint64, len(a))
+	for i, elem := range a {
+		res[i] = make([]uint64, len(elem))
+		for j, elem := range elem {
+			res[i][j] = uint64(elem)
+		}
+	}
+	return res
+}
+
+func AddMatrices[T ByteOrInt](a, b [][]T) {
 	if len(a) != len(b) || len(a[0]) != len(b[0]) {
 		panic(fmt.Errorf("a and b do not have the same dimensions (%d, %d), (%d, %d)", len(a), len(a[0]), len(b), len(b[0])))
 	}
@@ -112,12 +127,12 @@ func AddMatrices(a, b [][]byte) {
 	}
 }
 
-func AddMatricesNew(a, b [][]byte) [][]byte {
+func AddMatricesNew[T ByteOrInt](a, b [][]T) [][]T {
 	if len(a) != len(b) || len(a[0]) != len(b[0]) {
 		panic(fmt.Errorf("a and b do not have the same dimensions (%d, %d), (%d, %d)", len(a), len(a[0]), len(b), len(b[0])))
 	}
 
-	c := generateZeroMatrix(len(a), len(a[0]))
+	c := generateZeroMatrix[T](len(a), len(a[0]))
 
 	for i := range a {
 		for j := range a[i] {
@@ -149,15 +164,36 @@ func MultiplyMatrices(A, B [][]byte) [][]byte {
 	return C
 }
 
-func MatrixTranspose(a [][]byte) [][]byte {
+func MultiplyMatricesExtension(A, B [][]uint64) [][]uint64 {
+	rowsA, colsA := len(A), len(A[0])
+	rowsB, colsB := len(B), len(B[0])
+
+	if colsA != rowsB {
+		panic(fmt.Sprintf("Cannot multiply matrices colsA: '%d', rowsB: '%d'", colsA, rowsB))
+	}
+
+	C := make([][]uint64, rowsA)
+	for i := range C {
+		C[i] = make([]uint64, colsB)
+		for j := 0; j < colsB; j++ {
+			for k := 0; k < colsA; k++ {
+				C[i][j] ^= field.Gf64Mul(A[i][k], B[k][j])
+			}
+		}
+	}
+
+	return C
+}
+
+func MatrixTranspose[T any](a [][]T) [][]T {
 	if len(a) == 0 {
-		return [][]byte{}
+		return [][]T{}
 	}
 
 	rows, cols := len(a), len(a[0])
-	result := make([][]byte, cols)
+	result := make([][]T, cols)
 	for i := range result {
-		result[i] = make([]byte, rows)
+		result[i] = make([]T, rows)
 	}
 
 	for i := 0; i < rows; i++ {
@@ -442,6 +478,14 @@ func MultiplyVecConstant(b byte, a []byte) []byte {
 	C := make([]byte, len(a))
 	for i := range C {
 		C[i] = field.Gf16Mul(b, a[i])
+	}
+	return C
+}
+
+func MultiplyVecConstantExtension(b uint64, a []byte) []uint64 {
+	C := make([]uint64, len(a))
+	for i := range C {
+		C[i] = field.Gf64Mul(b, uint64(a[i]))
 	}
 	return C
 }

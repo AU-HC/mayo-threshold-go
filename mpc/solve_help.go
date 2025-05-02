@@ -101,7 +101,7 @@ func (c *Context) computeLittleX(parties []*Party) {
 			gammaElem := zVector.gammas[index][0]
 
 			AddMatrices(z.shares, vectorToMatrix(MultiplyVecConstant(shareElem, basis[index])))
-			AddMatrices(z.gammas, vectorToMatrix(MultiplyVecConstant(gammaElem, basis[index])))
+			AddMatrices(z.gammas, vectorToMatrix(MultiplyVecConstantExtension(gammaElem, basis[index])))
 		}
 
 		party.Z = z

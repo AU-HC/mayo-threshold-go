@@ -1,8 +1,10 @@
 package mpc
 
 type Field struct {
-	mulTable [][]byte
-	invTable []byte
+	mulTable          [][]byte
+	invTable          []byte
+	mulTableExtension [][]uint64
+	invTableExtension []uint64
 }
 
 func InitField() *Field {
@@ -22,6 +24,10 @@ func (f *Field) Gf16Mul(a, b byte) byte {
 // Gf16Inv calculates the inverse of an element in GF(16)
 func (f *Field) Gf16Inv(a byte) byte {
 	return f.invTable[a]
+}
+
+func (f *Field) Gf64Mul(a, b uint64) uint64 {
+	return gf64Mul(a, b)
 }
 
 func generateMulAndInvTable() ([][]byte, []byte) {
@@ -64,6 +70,11 @@ func reduceAModF(A [][]byte) [][]byte {
 	}
 	A = A[:m]
 	return A
+}
+
+func gf64Mul(a, b uint64) uint64 {
+	// TODO: Implement this
+	return uint64(0)
 }
 
 func gf16Mul(a, b byte) byte {

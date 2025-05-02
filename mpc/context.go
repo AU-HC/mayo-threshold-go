@@ -15,7 +15,8 @@ func CreateContext(n, t int) *Context {
 		}
 	} else {
 		return &Context{
-			algo: &Shamir{n: n, t: t},
+			// TODO: Revert
+			algo: &Additive{n: n},
 			f:    InitField(),
 		}
 	}

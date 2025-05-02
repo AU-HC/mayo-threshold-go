@@ -2,6 +2,7 @@ package mpc
 
 import (
 	"fmt"
+	random "math/rand"
 	"mayo-threshold-go/rand"
 	"reflect"
 )
@@ -40,6 +41,12 @@ func (s *Shamir) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	for i, share := range shares {
 		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
 	}
+
+	err := commitAndVerify(muShares)
+	if err != nil {
+		return nil, err
+	}
+
 	muOpen := s.openMatrix(muShares)
 
 	if !reflect.DeepEqual(zero, muOpen) {
@@ -131,6 +138,12 @@ func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, erro
 	for i, share := range shares {
 		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
 	}
+
+	err := commitAndVerify(muShares)
+	if err != nil {
+		return nil, err
+	}
+
 	muOpen := a.openMatrix(muShares)
 
 	if !reflect.DeepEqual(zero, muOpen) {
@@ -182,4 +195,32 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 	secret := rand.Matrix(rows, cols)
 	return a.createSharesForMatrix(secret)
+}
+
+func commitAndVerify(shares [][][]byte) error {
+	parties := len(shares)
+
+	// Create commitments
+	commitmentRandomness := make([][]byte, parties)
+	commitments := make([][]byte, parties)
+	for p := 0; p < parties; p++ {
+		randomVector := make([]byte, 32)
+
+		for i := 0; i < len(randomVector); i++ {
+			randomVector[i] = byte(random.Int())
+		}
+
+		commitmentRandomness[p] = randomVector
+		commitments[p] = Commit(shares[p], commitmentRandomness[p])
+	}
+
+	// Check commitments
+	for p := 0; p < parties; p++ {
+		isValid := VerifyCommitment(shares[p], commitmentRandomness[p], commitments[p])
+		if !isValid {
+			return fmt.Errorf("commitment verification failed")
+		}
+	}
+
+	return nil
 }

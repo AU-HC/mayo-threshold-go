@@ -18,13 +18,13 @@ func (c *Context) ThresholdVerifiableSignAPI(message []byte, parties []*model.Pa
 // ThresholdVerifiableSign takes a message, parties and outputs an 'opened' signature, which can be verified using
 // original MAYO, or using the Verify method.
 func (c *Context) ThresholdVerifiableSign(message []byte, parties []*model.Party) model.ThresholdSignature {
-	iteration := 0
+	retries := 0
 
 	for true {
 		// Steps 1-3 of sign
-		c.computeM(parties, message, iteration)
+		c.computeM(parties, message, retries)
 		// Step 4 of sign
-		c.computeY(parties, iteration)
+		c.computeY(parties, retries)
 		// Step 5 of sign
 		c.localComputeA(parties)
 		c.localComputeY(parties)
@@ -32,11 +32,11 @@ func (c *Context) ThresholdVerifiableSign(message []byte, parties []*model.Party
 		// Step 6 of sign
 		// ** Algorithm solve **
 		// Steps 1-4 of solve
-		isTFullRank := c.computeT(parties, iteration)
+		isTFullRank := c.computeT(parties, retries)
 		if isTFullRank {
 			break
 		}
-		iteration++
+		retries++
 	}
 	// Step 5 of solve
 	c.computeAInverse(parties)

@@ -73,8 +73,33 @@ func reduceAModF(A [][]byte) [][]byte {
 }
 
 func gf64Mul(a, b uint64) uint64 {
-	// TODO: Implement this
-	return uint64(0)
+	// https://en.wikipedia.org/wiki/Finite_field_arithmetic#Multiplication
+	p := uint64(0)
+
+	for {
+		if a == 0 || b == 0 {
+			break
+		}
+
+		// Extract the least significant bit of b
+		lsb := b & uint64(1)
+		if lsb == 1 {
+			p = p ^ a
+		}
+
+		b = b >> 1
+
+		// Keep track of whether the first bit of a is set to one
+		msb := a & uint64(8000000000000000)
+		carry := msb == uint64(8000000000000000)
+
+		a = a << 1
+		if carry {
+			a = a ^ uint64(0xD)
+		}
+	}
+
+	return p
 }
 
 func gf16Mul(a, b byte) byte {

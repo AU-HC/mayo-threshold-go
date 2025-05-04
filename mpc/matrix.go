@@ -105,13 +105,17 @@ func generateIdentityMatrix(dimension int) [][]byte {
 }
 
 func ConvertMatrixExtensionField(a [][]byte) [][]uint64 {
-	res := make([][]uint64, len(a))
-	for i, elem := range a {
-		res[i] = make([]uint64, len(elem))
-		for j, elem := range elem {
-			res[i][j] = uint64(elem)
+	rows := len(a)
+	columns := len(a[0])
+
+	res := make([][]uint64, rows)
+	for row := range rows {
+		res[row] = make([]uint64, columns)
+		for column := range columns {
+			res[row][column] = uint64(a[row][column])
 		}
 	}
+
 	return res
 }
 

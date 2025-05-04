@@ -2,6 +2,7 @@ package mpc
 
 import (
 	"fmt"
+	random "math/rand"
 	"mayo-threshold-go/rand"
 	"reflect"
 )
@@ -140,10 +141,10 @@ func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, erro
 		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstantExtension(sPrime, share.alpha))
 	}
 
-	/*err := commitAndVerify(muShares)
+	err := commitAndVerify(muShares)
 	if err != nil {
 		return nil, err
-	}*/
+	}
 
 	muOpen := a.openMatrixExtension(muShares)
 
@@ -209,12 +210,12 @@ func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 	return a.createSharesForMatrix(secret)
 }
 
-/*func commitAndVerify(shares [][][]uint64) error {
+func commitAndVerify(shares [][][]uint64) error {
 	parties := len(shares)
 
 	// Create commitments
 	commitmentRandomness := make([][]uint64, parties)
-	commitments := make([][]uint64, parties)
+	commitments := make([][]byte, parties)
 	for p := 0; p < parties; p++ {
 		randomVector := make([]uint64, 32)
 
@@ -235,4 +236,4 @@ func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 	}
 
 	return nil
-}*/
+}

@@ -12,7 +12,7 @@ func SampleFieldElement() byte {
 
 func SampleExtensionFieldElement() uint64 {
 	randomInt := rand.Int()
-	return uint64(randomInt) & 0xfffffff
+	return uint64(randomInt)
 }
 
 func Shake256(outputLength int, inputs ...[]byte) []byte {

@@ -6,8 +6,7 @@ import (
 	"reflect"
 )
 
-// TODO: This should not be a single global alpha
-const GlobalAlpha = byte(13)
+var GlobalAlphas = [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 
 type Share struct {
 	share        byte
@@ -65,11 +64,10 @@ func generateSharesForElement(n int, secret byte) []Share {
 	gammas[n-1] = make([]byte, macAmount)
 
 	for i := 0; i < macAmount; i++ {
-		alphas[n-1][i] = alphaSum[i] ^ GlobalAlpha
+		alphas[n-1][i] = alphaSum[i] ^ GlobalAlphas[i]
 	}
 
 	// Gamma
-	alphaTimesSecret := field.Gf16Mul(GlobalAlpha, secret)
 	gammaSum := make([]byte, macAmount)
 	for i := 0; i < n-1; i++ {
 		for j := 0; j < macAmount; j++ {
@@ -80,6 +78,7 @@ func generateSharesForElement(n int, secret byte) []Share {
 	}
 
 	for i := 0; i < macAmount; i++ {
+		alphaTimesSecret := field.Gf16Mul(GlobalAlphas[i], secret)
 		gammas[n-1][i] = gammaSum[i] ^ alphaTimesSecret
 	}
 

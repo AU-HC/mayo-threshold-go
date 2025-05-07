@@ -76,16 +76,30 @@ func (c *Context) localComputeA(parties []*Party) {
 		A := createEmptyMatrixShare(m+shifts, k*o)
 		ell := 0
 		MHatShares := make([][][]byte, k)
-		MHatGammas := make([][][]byte, k)
+		MHatGammas := make([][][][]byte, macAmount)
+
 		for index := 0; index < k; index++ {
 			MHatShares[index] = generateZeroMatrix(m, o)
-			MHatGammas[index] = generateZeroMatrix(m, o)
+		}
+
+		for i := 0; i < macAmount; i++ {
+			MHatGammas[i] = make([][][]byte, k)
+			for index := 0; index < k; index++ {
+				MHatGammas[i][index] = generateZeroMatrix(m, o)
+			}
 		}
 
 		for t := 0; t < k; t++ {
 			for j := 0; j < m; j++ {
-				copy(MHatShares[t][j][:], party.M[j].shares[t][:])
-				copy(MHatGammas[t][j][:], party.M[j].gammas[t][:])
+				copy(MHatShares[:][t][j], party.M[j].shares[:][t])
+			}
+		}
+
+		for i := 0; i < macAmount; i++ {
+			for t := 0; t < k; t++ {
+				for j := 0; j < m; j++ {
+					copy(MHatGammas[i][t][j], party.M[j].gammas[i][t])
+				}
 			}
 		}
 
@@ -94,13 +108,19 @@ func (c *Context) localComputeA(parties []*Party) {
 				for row := 0; row < m; row++ {
 					for column := t * o; column < (t+1)*o; column++ {
 						A.shares[row+ell][column] ^= MHatShares[j][row][column%o]
-						A.gammas[row+ell][column] ^= MHatGammas[j][row][column%o]
+
+						for i := 0; i < macAmount; i++ {
+							A.gammas[i][row+ell][column] ^= MHatGammas[i][j][row][column%o]
+						}
 					}
 
 					if t != j {
 						for column := j * o; column < (j+1)*o; column++ {
 							A.shares[row+ell][column] ^= MHatShares[t][row][column%o]
-							A.gammas[row+ell][column] ^= MHatGammas[t][row][column%o]
+
+							for i := 0; i < macAmount; i++ {
+								A.gammas[i][row+ell][column] ^= MHatGammas[i][t][row][column%o]
+							}
 						}
 					}
 				}
@@ -110,7 +130,9 @@ func (c *Context) localComputeA(parties []*Party) {
 		}
 
 		A.shares = reduceAModF(A.shares)
-		A.gammas = reduceAModF(A.gammas)
+		for i := 0; i < macAmount; i++ {
+			A.gammas[i] = reduceAModF(A.gammas[i])
+		}
 		A.alpha = party.M[0].alpha
 		party.A = A
 	}
@@ -124,22 +146,36 @@ func (c *Context) localComputeY(parties []*Party) {
 		for j := 0; j < k; j++ {
 			for t := k - 1; t >= j; t-- {
 				uShares := make([]byte, m)
-				uGammas := make([]byte, m)
+				uGammas := make([][]byte, macAmount)
+
+				for i := 0; i < macAmount; i++ {
+					uGammas[i] = make([]byte, m)
+				}
+
 				if j == t {
 					for a := 0; a < m; a++ {
 						uShares[a] = party.Y[a].shares[j][j]
-						uGammas[a] = party.Y[a].gammas[j][j]
+
+						for i := 0; i < macAmount; i++ {
+							uGammas[i][a] = party.Y[a].gammas[i][j][j]
+						}
 					}
 				} else {
 					for a := 0; a < m; a++ {
 						uShares[a] = party.Y[a].shares[j][t] ^ party.Y[a].shares[t][j]
-						uGammas[a] = party.Y[a].gammas[j][t] ^ party.Y[a].gammas[t][j]
+
+						for i := 0; i < macAmount; i++ {
+							uGammas[i][a] = party.Y[a].gammas[i][j][t] ^ party.Y[a].gammas[i][t][j]
+						}
 					}
 				}
 
 				for d := 0; d < m; d++ {
 					y.shares[d+ell][0] ^= uShares[d]
-					y.gammas[d+ell][0] ^= uGammas[d]
+
+					for i := 0; i < macAmount; i++ {
+						y.gammas[i][d+ell][0] ^= uGammas[i][d]
+					}
 				}
 
 				ell++
@@ -147,7 +183,11 @@ func (c *Context) localComputeY(parties []*Party) {
 		}
 
 		y.shares = vectorToMatrix(reduceVecModF(matrixToVec(y.shares)))
-		y.gammas = vectorToMatrix(reduceVecModF(matrixToVec(y.gammas)))
+
+		for i := 0; i < macAmount; i++ {
+			y.gammas[i] = vectorToMatrix(reduceVecModF(matrixToVec(y.gammas[i])))
+		}
+
 		y.alpha = party.Y[0].alpha
 
 		t := party.LittleT

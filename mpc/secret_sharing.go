@@ -22,7 +22,11 @@ type Shamir struct {
 func (s *Shamir) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
 	result.shares = AddMatricesNew(A, B.shares)
-	result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+
+	for i := 0; i < macAmount; i++ {
+		result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, B.alpha[i]))
+	}
+
 	result.alpha = B.alpha
 	return result
 }
@@ -37,21 +41,24 @@ func (s *Shamir) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	}
 	sPrime := s.openMatrix(sPrimeShares)
 
-	muShares := make([][][]byte, parties)
-	for i, share := range shares {
-		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
+	for k := 0; k < macAmount; k++ {
+		muShares := make([][][]byte, parties)
+		for i, share := range shares {
+			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, share.alpha[k]))
+		}
+
+		err := commitAndVerify(muShares)
+		if err != nil {
+			return nil, err
+		}
+
+		muOpen := s.openMatrix(muShares)
+
+		if !reflect.DeepEqual(zero, muOpen) {
+			return sPrime, fmt.Errorf("mu was not 0")
+		}
 	}
 
-	err := commitAndVerify(muShares)
-	if err != nil {
-		return nil, err
-	}
-
-	muOpen := s.openMatrix(muShares)
-
-	if !reflect.DeepEqual(zero, muOpen) {
-		return sPrime, fmt.Errorf("mu was not 0")
-	}
 	return sPrime, nil
 }
 
@@ -113,13 +120,22 @@ type Additive struct {
 
 func (a *Additive) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
+	result.gammas = make([][][]byte, macAmount)
+
 	if partyNumber == 0 {
 		result.shares = AddMatricesNew(A, B.shares)
-		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+
+		for i := 0; i < macAmount; i++ {
+			result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, B.alpha[i]))
+		}
+
 		result.alpha = B.alpha
 	} else {
 		result.shares = B.shares
-		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
+
+		for i := 0; i < macAmount; i++ {
+			result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, B.alpha[i]))
+		}
 		result.alpha = B.alpha
 	}
 	return result
@@ -134,21 +150,24 @@ func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, erro
 		AddMatrices(sPrime, share.shares)
 	}
 
-	muShares := make([][][]byte, parties)
-	for i, share := range shares {
-		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
+	for k := 0; k < macAmount; k++ {
+		muShares := make([][][]byte, parties)
+		for i, share := range shares {
+			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, share.alpha[k]))
+		}
+
+		err := commitAndVerify(muShares)
+		if err != nil {
+			return nil, err
+		}
+
+		muOpen := a.openMatrix(muShares)
+
+		if !reflect.DeepEqual(zero, muOpen) {
+			return sPrime, fmt.Errorf("mu was not 0")
+		}
 	}
 
-	err := commitAndVerify(muShares)
-	if err != nil {
-		return nil, err
-	}
-
-	muOpen := a.openMatrix(muShares)
-
-	if !reflect.DeepEqual(zero, muOpen) {
-		return sPrime, fmt.Errorf("mu was not 0")
-	}
 	return sPrime, nil
 }
 
@@ -170,10 +189,16 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 	matrixShares := make([]MatrixShare, amountOfParties)
 	for i := range matrixShares {
 		matrixShares[i].shares = make([][]byte, rows)
-		matrixShares[i].gammas = make([][]byte, rows)
+		matrixShares[i].gammas = make([][][]byte, macAmount)
 		for r := 0; r < rows; r++ {
 			matrixShares[i].shares[r] = make([]byte, cols)
-			matrixShares[i].gammas[r] = make([]byte, cols)
+		}
+
+		for k := 0; k < macAmount; k++ {
+			matrixShares[i].gammas[k] = make([][]byte, rows)
+			for r := 0; r < rows; r++ {
+				matrixShares[i].gammas[k][r] = make([]byte, cols)
+			}
 		}
 	}
 
@@ -182,9 +207,11 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 			shareParts := generateSharesForElement(amountOfParties, secretMatrix[i][j])
 
 			for l := 0; l < amountOfParties; l++ {
-				matrixShares[l].shares[i][j] = shareParts[l].share
-				matrixShares[l].alpha = shareParts[l].alpha
-				matrixShares[l].gammas[i][j] = shareParts[l].gamma
+				for k := 0; k < macAmount; k++ {
+					matrixShares[l].shares[i][j] = shareParts[l].share
+					matrixShares[l].alpha = shareParts[l].alpha
+					matrixShares[l].gammas[k][i][j] = shareParts[l].gamma[k]
+				}
 			}
 		}
 	}

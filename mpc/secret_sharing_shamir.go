@@ -21,8 +21,8 @@ func createShares(secret byte, n, t int) []Share {
 	gammaCoefficients := generateCoefficients(field.Gf16Mul(secret, GlobalAlpha), t)
 
 	shares := make([]byte, n)
-	alphaShares := make([]byte, n)
-	gammaShares := make([]byte, n)
+	alphaShares := make([][]byte, n)
+	gammaShares := make([][]byte, n)
 
 	for x := 1; x <= n; x++ {
 		y := shareCoefficients[len(shareCoefficients)-1]
@@ -32,20 +32,24 @@ func createShares(secret byte, n, t int) []Share {
 		shares[x-1] = y
 	}
 
-	for x := 1; x <= n; x++ {
-		y := alphaCoefficients[len(alphaCoefficients)-1]
-		for i := len(alphaCoefficients) - 2; i >= 0; i-- {
-			y = field.Gf16Mul(y, byte(x)) ^ alphaCoefficients[i]
+	for i := 0; i < macAmount; i++ {
+		for x := 1; x <= n; x++ {
+			y := alphaCoefficients[len(alphaCoefficients)-1]
+			for i := len(alphaCoefficients) - 2; i >= 0; i-- {
+				y = field.Gf16Mul(y, byte(x)) ^ alphaCoefficients[i]
+			}
+			alphaShares[x-1][i] = y
 		}
-		alphaShares[x-1] = y
 	}
 
-	for x := 1; x <= n; x++ {
-		y := gammaCoefficients[len(gammaCoefficients)-1]
-		for i := len(gammaCoefficients) - 2; i >= 0; i-- {
-			y = field.Gf16Mul(y, byte(x)) ^ gammaCoefficients[i]
+	for i := 0; i < macAmount; i++ {
+		for x := 1; x <= n; x++ {
+			y := gammaCoefficients[len(gammaCoefficients)-1]
+			for i := len(gammaCoefficients) - 2; i >= 0; i-- {
+				y = field.Gf16Mul(y, byte(x)) ^ gammaCoefficients[i]
+			}
+			gammaShares[x-1][i] = y
 		}
-		gammaShares[x-1] = y
 	}
 
 	// Zip the shares into []Share

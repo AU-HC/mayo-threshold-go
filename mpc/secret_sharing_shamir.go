@@ -57,7 +57,6 @@ func createShares(secret byte, n, t int) []Share {
 	for i := 0; i < n; i++ {
 		result[i] = Share{
 			share: shares[i],
-			alpha: alphaShares[i],
 			gamma: gammaShares[i],
 		}
 	}

@@ -67,7 +67,6 @@ func matrixify(v MatrixShare, rows, cols int) MatrixShare {
 	matrix := MatrixShare{
 		shares: make([][]byte, rows),
 		gammas: make([][][]byte, macAmount),
-		alpha:  v.alpha,
 	}
 
 	for k := 0; k < macAmount; k++ {
@@ -249,7 +248,6 @@ func appendMatrixShareHorizontal(A, B MatrixShare) MatrixShare {
 		}
 
 	}
-	result.alpha = A.alpha
 	return result
 }
 

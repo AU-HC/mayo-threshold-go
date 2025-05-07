@@ -93,7 +93,6 @@ func (c *Context) computeLittleX(parties []*Party) {
 	zShares := c.algo.createSharesForRandomMatrix(t-s, 1)
 	for partyNumber, party := range parties {
 		z := createEmptyMatrixShare(t, 1)
-		z.alpha = party.LittleY.alpha
 
 		zVector := zShares[partyNumber]
 

@@ -10,13 +10,22 @@ import (
 type SecretSharingAlgo interface {
 	openMatrix(shares [][][]byte) [][]byte
 	authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
-	createSharesForMatrix([][]byte) []MatrixShare
+	createSharesForMatrix(matrix [][]byte) []MatrixShare
 	createSharesForRandomMatrix(rows, cols int) []MatrixShare
 	AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare
 }
 
 type Shamir struct {
-	n, t int
+	n, t        int
+	alphaShares [][]byte
+}
+
+func CreateShamir(n, t int) *Shamir {
+	return &Shamir{
+		n:           n,
+		t:           t,
+		alphaShares: generateAlphaSharesShamir(n, t),
+	}
 }
 
 func (s *Shamir) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
@@ -24,10 +33,9 @@ func (s *Shamir) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) Matri
 	result.shares = AddMatricesNew(A, B.shares)
 
 	for i := 0; i < macAmount; i++ {
-		result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, B.alpha[i]))
+		result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, s.alphaShares[partyNumber][i]))
 	}
 
-	result.alpha = B.alpha
 	return result
 }
 
@@ -44,7 +52,7 @@ func (s *Shamir) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	for k := 0; k < macAmount; k++ {
 		muShares := make([][][]byte, parties)
 		for i, share := range shares {
-			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, share.alpha[k]))
+			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, s.alphaShares[i][k]))
 		}
 
 		err := commitAndVerify(muShares)
@@ -100,7 +108,6 @@ func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 
 			for l := 0; l < amountOfParties; l++ {
 				shares[l].shares[r][c] = byteShares[l].share
-				shares[l].alpha = byteShares[l].alpha
 				shares[l].gammas[r][c] = byteShares[l].gamma
 			}
 		}
@@ -115,7 +122,15 @@ func (s *Shamir) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 }
 
 type Additive struct {
-	n int
+	n           int
+	alphaShares [][]byte
+}
+
+func CreateAdditive(n int) *Additive {
+	return &Additive{
+		n:           n,
+		alphaShares: generateAlphaSharesAdditive(n),
+	}
 }
 
 func (a *Additive) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
@@ -124,20 +139,14 @@ func (a *Additive) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) Mat
 
 	if partyNumber == 0 {
 		result.shares = AddMatricesNew(A, B.shares)
-
-		for i := 0; i < macAmount; i++ {
-			result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, B.alpha[i]))
-		}
-
-		result.alpha = B.alpha
 	} else {
 		result.shares = B.shares
-
-		for i := 0; i < macAmount; i++ {
-			result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, B.alpha[i]))
-		}
-		result.alpha = B.alpha
 	}
+
+	for i := 0; i < macAmount; i++ {
+		result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, a.alphaShares[partyNumber][i]))
+	}
+
 	return result
 }
 
@@ -153,7 +162,7 @@ func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, erro
 	for k := 0; k < macAmount; k++ {
 		muShares := make([][][]byte, parties)
 		for i, share := range shares {
-			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, share.alpha[k]))
+			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, a.alphaShares[i][k]))
 		}
 
 		err := commitAndVerify(muShares)
@@ -204,12 +213,11 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 
 	for i := 0; i < rows; i++ {
 		for j := 0; j < cols; j++ {
-			shareParts := generateSharesForElement(amountOfParties, secretMatrix[i][j])
+			shareParts := generateSharesForElement(secretMatrix[i][j], a.alphaShares)
 
 			for l := 0; l < amountOfParties; l++ {
 				for k := 0; k < macAmount; k++ {
 					matrixShares[l].shares[i][j] = shareParts[l].share
-					matrixShares[l].alpha = shareParts[l].alpha
 					matrixShares[l].gammas[k][i][j] = shareParts[l].gamma[k]
 				}
 			}

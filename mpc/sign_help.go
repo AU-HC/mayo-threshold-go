@@ -133,7 +133,6 @@ func (c *Context) localComputeA(parties []*Party) {
 		for i := 0; i < macAmount; i++ {
 			A.gammas[i] = reduceAModF(A.gammas[i])
 		}
-		A.alpha = party.M[0].alpha
 		party.A = A
 	}
 }
@@ -187,8 +186,6 @@ func (c *Context) localComputeY(parties []*Party) {
 		for i := 0; i < macAmount; i++ {
 			y.gammas[i] = vectorToMatrix(reduceVecModF(matrixToVec(y.gammas[i])))
 		}
-
-		y.alpha = party.Y[0].alpha
 
 		t := party.LittleT
 		y = c.algo.AddPublicLeft(vectorToMatrix(t), y, partyNumber)

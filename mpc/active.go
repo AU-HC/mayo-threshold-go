@@ -1,27 +1,23 @@
 package mpc
 
 import (
-	"fmt"
 	"mayo-threshold-go/rand"
-	"reflect"
 )
 
 var GlobalAlphas = [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 
 type Share struct {
-	share        byte
-	alpha, gamma []byte
+	share byte
+	gamma []byte
 }
 
 type MatrixShare struct {
 	shares [][]byte
 	gammas [][][]byte
-	alpha  []byte
 }
 
 func createEmptyMatrixShare(rows, cols int) MatrixShare {
 	return MatrixShare{
-		alpha:  make([]byte, macAmount),
 		shares: generateZeroMatrix(rows, cols),
 		gammas: generateZeroMatrices(macAmount, rows, cols),
 	}
@@ -29,21 +25,66 @@ func createEmptyMatrixShare(rows, cols int) MatrixShare {
 
 func MatrixShareTranspose(m MatrixShare) MatrixShare {
 	return MatrixShare{
-		alpha:  m.alpha,
 		shares: MatrixTranspose(m.shares),
 		gammas: MatricesTranspose(m.gammas),
 	}
 }
 
-func generateSharesForElement(n int, secret byte) []Share {
-	shares := make([]byte, n)
-	alphas := make([][]byte, n)
-	gammas := make([][]byte, n)
+func generateAlphaSharesAdditive(n int) [][]byte {
+	alphaShares := make([][]byte, n)
+	alphaSum := make([]byte, macAmount)
+
+	for i := 0; i < n-1; i++ {
+		alphaShares[i] = make([]byte, macAmount)
+
+		for j := 0; j < macAmount; j++ {
+			alphaShare := rand.SampleFieldElement()
+			alphaShares[i][j] = alphaShare
+			alphaSum[j] ^= alphaShare
+		}
+	}
+
+	alphaShares[n-1] = make([]byte, macAmount)
+	for i := 0; i < macAmount; i++ {
+		alphaShares[n-1][i] = alphaSum[i] ^ GlobalAlphas[i]
+	}
+
+	return alphaShares
+}
+
+func generateAlphaSharesShamir(n, t int) [][]byte {
+	alphaShares := make([][]byte, n)
+
+	for i := 0; i < n; i++ {
+		alphaShares[i] = make([]byte, macAmount)
+	}
+
+	for i, alpha := range GlobalAlphas {
+		shareCoefficients := generateCoefficients(alpha, t)
+
+		for x := 1; x <= n; x++ {
+			y := shareCoefficients[len(shareCoefficients)-1]
+			for i := len(shareCoefficients) - 2; i >= 0; i-- {
+				y = field.Gf16Mul(y, byte(x)) ^ shareCoefficients[i]
+			}
+			alphaShares[x-1][i] = y
+		}
+	}
+
+	return alphaShares
+}
+
+func generateSharesForElement(secret byte, alphaShares [][]byte) []Share {
+	amountOfParties := len(alphaShares)
+
+	shares := make([]byte, amountOfParties)
+	alphas := make([][]byte, amountOfParties)
+	gammas := make([][]byte, amountOfParties)
 	alphaSum := make([]byte, macAmount)
 
 	var sharesSum byte
 
-	for i := 0; i < n-1; i++ {
+	for i := 0; i < amountOfParties-1; i++ {
 		alphas[i] = make([]byte, macAmount)
 		gammas[i] = make([]byte, macAmount)
 
@@ -59,17 +100,17 @@ func generateSharesForElement(n int, secret byte) []Share {
 			alphaSum[j] ^= alpha
 		}
 	}
-	shares[n-1] = secret ^ sharesSum
-	alphas[n-1] = make([]byte, macAmount)
-	gammas[n-1] = make([]byte, macAmount)
+	shares[amountOfParties-1] = secret ^ sharesSum
+	alphas[amountOfParties-1] = make([]byte, macAmount)
+	gammas[amountOfParties-1] = make([]byte, macAmount)
 
 	for i := 0; i < macAmount; i++ {
-		alphas[n-1][i] = alphaSum[i] ^ GlobalAlphas[i]
+		alphas[amountOfParties-1][i] = alphaSum[i] ^ GlobalAlphas[i]
 	}
 
 	// Gamma
 	gammaSum := make([]byte, macAmount)
-	for i := 0; i < n-1; i++ {
+	for i := 0; i < amountOfParties-1; i++ {
 		for j := 0; j < macAmount; j++ {
 			gamma := rand.SampleFieldElement()
 			gammas[i][j] = gamma
@@ -79,54 +120,18 @@ func generateSharesForElement(n int, secret byte) []Share {
 
 	for i := 0; i < macAmount; i++ {
 		alphaTimesSecret := field.Gf16Mul(GlobalAlphas[i], secret)
-		gammas[n-1][i] = gammaSum[i] ^ alphaTimesSecret
+		gammas[amountOfParties-1][i] = gammaSum[i] ^ alphaTimesSecret
 	}
 
-	result := make([]Share, n)
-	for i := 0; i < n; i++ {
+	result := make([]Share, amountOfParties)
+	for i := 0; i < amountOfParties; i++ {
 		result[i] = Share{
 			share: shares[i],
-			alpha: alphas[i],
 			gamma: gammas[i],
 		}
 	}
 
 	return result
-}
-
-func createSharesForMatrix(n int, secretMatrix [][]byte) []MatrixShare {
-	rows, cols := len(secretMatrix), len(secretMatrix[0])
-
-	matrixShares := make([]MatrixShare, n)
-	for i := range matrixShares {
-		matrixShares[i].shares = make([][]byte, rows)
-		matrixShares[i].gammas = make([][][]byte, macAmount)
-
-		for r := 0; r < rows; r++ {
-			matrixShares[i].shares[r] = make([]byte, cols)
-		}
-
-		for k := 0; k < macAmount; k++ {
-			matrixShares[i].gammas[k] = make([][]byte, rows)
-			for r := 0; r < rows; r++ {
-				matrixShares[i].gammas[k][r] = make([]byte, cols)
-			}
-		}
-	}
-
-	for i := 0; i < rows; i++ {
-		for j := 0; j < cols; j++ {
-			shareParts := generateSharesForElement(n, secretMatrix[i][j])
-
-			for l := 0; l < n; l++ {
-				matrixShares[l].shares[i][j] = shareParts[l].share
-				matrixShares[l].alpha = shareParts[l].alpha
-				matrixShares[l].gammas[:][i][j] = shareParts[l].gamma
-			}
-		}
-	}
-
-	return matrixShares
 }
 
 func MultiplyMatrixWithConstant(a [][]byte, b byte) [][]byte {
@@ -150,25 +155,6 @@ func AddMatrixShares(A, B MatrixShare) MatrixShare {
 		result.gammas[i] = AddMatricesNew(A.gammas[i], B.gammas[i])
 	}
 
-	result.alpha = A.alpha
-	return result
-}
-
-func AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
-	var result MatrixShare
-	if partyNumber == 0 {
-		result.shares = AddMatricesNew(A, B.shares)
-		for i := 0; i < macAmount; i++ {
-			result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, B.alpha[i]))
-		}
-		result.alpha = B.alpha
-	} else {
-		result.shares = B.shares
-		for i := 0; i < macAmount; i++ {
-			result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, B.alpha[i]))
-		}
-		result.alpha = B.alpha
-	}
 	return result
 }
 
@@ -181,7 +167,6 @@ func MulPublicLeft(A [][]byte, B MatrixShare) MatrixShare {
 		result.gammas[i] = MultiplyMatrices(A, B.gammas[i])
 	}
 
-	result.alpha = B.alpha
 	return result
 }
 
@@ -194,34 +179,5 @@ func MulPublicRight(A MatrixShare, B [][]byte) MatrixShare {
 		result.gammas[i] = MultiplyMatrices(A.gammas[i], B)
 	}
 
-	result.alpha = A.alpha
 	return result
-}
-
-func openMatrix(shares []MatrixShare) ([][]byte, error) {
-	parties, rows, cols := len(shares), len(shares[0].shares), len(shares[0].shares[0])
-
-	zero := generateZeroMatrix(rows, cols)
-	sPrime := generateZeroMatrix(rows, cols)
-	for _, share := range shares {
-		AddMatrices(sPrime, share.shares)
-	}
-
-	for k := 0; k < macAmount; k++ {
-		muShares := make([][][]byte, parties)
-		for i, share := range shares {
-			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, share.alpha[k]))
-		}
-
-		muOpen := generateZeroMatrix(rows, cols)
-		for _, share := range muShares {
-			AddMatrices(muOpen, share)
-		}
-
-		if !reflect.DeepEqual(zero, muOpen) {
-			return sPrime, fmt.Errorf("mu was not 0")
-		}
-	}
-
-	return sPrime, nil
 }

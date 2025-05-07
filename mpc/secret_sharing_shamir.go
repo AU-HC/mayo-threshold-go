@@ -30,6 +30,11 @@ func createShares(secret byte, n, t int) []Share {
 		shares[x-1] = y
 	}
 
+	for i := 0; i < n; i++ {
+		alphaShares[i] = make([]byte, macAmount)
+		gammaShares[i] = make([]byte, macAmount)
+	}
+
 	for i := 0; i < macAmount; i++ {
 		alphaCoefficients := generateCoefficients(GlobalAlphas[i], t)
 		for x := 1; x <= n; x++ {

@@ -30,6 +30,7 @@ func CreateShamir(n, t int) *Shamir {
 
 func (s *Shamir) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
+	result.gammas = make([][][]byte, macAmount)
 	result.shares = AddMatricesNew(A, B.shares)
 
 	for i := 0; i < macAmount; i++ {
@@ -108,7 +109,9 @@ func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 
 			for l := 0; l < amountOfParties; l++ {
 				shares[l].shares[r][c] = byteShares[l].share
-				shares[l].gammas[r][c] = byteShares[l].gamma
+				for i := 0; i < macAmount; i++ {
+					shares[l].gammas[i][r][c] = byteShares[l].gamma[i]
+				}
 			}
 		}
 	}
@@ -213,7 +216,7 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 
 	for i := 0; i < rows; i++ {
 		for j := 0; j < cols; j++ {
-			shareParts := generateSharesForElement(secretMatrix[i][j], a.alphaShares)
+			shareParts := a.generateSharesForElement(secretMatrix[i][j])
 
 			for l := 0; l < amountOfParties; l++ {
 				for k := 0; k < macAmount; k++ {
@@ -225,6 +228,50 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 	}
 
 	return matrixShares
+}
+
+func (a *Additive) generateSharesForElement(secret byte) []Share {
+	amountOfParties := len(a.alphaShares)
+
+	shares := make([]byte, amountOfParties)
+	gammas := make([][]byte, amountOfParties)
+	var sharesSum byte
+
+	for i := 0; i < amountOfParties-1; i++ {
+		gammas[i] = make([]byte, macAmount)
+
+		// shares of the secret
+		share := rand.SampleFieldElement()
+		shares[i] = share
+		sharesSum ^= share
+	}
+	shares[amountOfParties-1] = secret ^ sharesSum
+	gammas[amountOfParties-1] = make([]byte, macAmount)
+
+	// Gamma
+	gammaSum := make([]byte, macAmount)
+	for i := 0; i < amountOfParties-1; i++ {
+		for j := 0; j < macAmount; j++ {
+			gamma := rand.SampleFieldElement()
+			gammas[i][j] = gamma
+			gammaSum[j] ^= gamma
+		}
+	}
+
+	for i := 0; i < macAmount; i++ {
+		alphaTimesSecret := field.Gf16Mul(GlobalAlphas[i], secret)
+		gammas[amountOfParties-1][i] = gammaSum[i] ^ alphaTimesSecret
+	}
+
+	result := make([]Share, amountOfParties)
+	for i := 0; i < amountOfParties; i++ {
+		result[i] = Share{
+			share: shares[i],
+			gamma: gammas[i],
+		}
+	}
+
+	return result
 }
 
 func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {

@@ -10,12 +10,12 @@ type Context struct {
 func CreateContext(n, t int) *Context {
 	if t == n {
 		return &Context{
-			algo: &Additive{n: n},
+			algo: CreateAdditive(n),
 			f:    InitField(),
 		}
 	} else {
 		return &Context{
-			algo: &Shamir{n: n, t: t},
+			algo: CreateShamir(n, t),
 			f:    InitField(),
 		}
 	}

@@ -13,7 +13,6 @@ func Commit(m [][]byte, r []byte) []byte {
 	for _, row := range m {
 		_, _ = h.Write(row[:])
 	}
-
 	_, _ = h.Write(r[:])
 
 	_, _ = h.Read(output[:])

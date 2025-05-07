@@ -72,7 +72,7 @@ func (c *Context) Verify(epk ExpandedPublicKey, message []byte, signature Signat
 	for i := 0; i < m; i++ {
 		STimesP := MultiplyMatrices(signature.S, P[i])
 		YClear := MultiplyMatrices(STimesP, MatrixTranspose(signature.S))
-		Y[i] = createSharesForMatrix(1, YClear)[0]
+		Y[i] = c.algo.createSharesForMatrix(YClear)[0]
 	}
 
 	// Create party, due to how code is structured

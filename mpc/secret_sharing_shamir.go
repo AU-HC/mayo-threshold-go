@@ -17,12 +17,10 @@ func generateCoefficients(secret byte, t int) []byte {
 
 func createShares(secret byte, n, t int) []Share {
 	shareCoefficients := generateCoefficients(secret, t)
-	alphaCoefficients := generateCoefficients(GlobalAlpha, t)
-	gammaCoefficients := generateCoefficients(field.Gf16Mul(secret, GlobalAlpha), t)
 
 	shares := make([]byte, n)
-	alphaShares := make([]byte, n)
-	gammaShares := make([]byte, n)
+	alphaShares := make([][]byte, n)
+	gammaShares := make([][]byte, n)
 
 	for x := 1; x <= n; x++ {
 		y := shareCoefficients[len(shareCoefficients)-1]
@@ -32,20 +30,31 @@ func createShares(secret byte, n, t int) []Share {
 		shares[x-1] = y
 	}
 
-	for x := 1; x <= n; x++ {
-		y := alphaCoefficients[len(alphaCoefficients)-1]
-		for i := len(alphaCoefficients) - 2; i >= 0; i-- {
-			y = field.Gf16Mul(y, byte(x)) ^ alphaCoefficients[i]
-		}
-		alphaShares[x-1] = y
+	for i := 0; i < n; i++ {
+		alphaShares[i] = make([]byte, macAmount)
+		gammaShares[i] = make([]byte, macAmount)
 	}
 
-	for x := 1; x <= n; x++ {
-		y := gammaCoefficients[len(gammaCoefficients)-1]
-		for i := len(gammaCoefficients) - 2; i >= 0; i-- {
-			y = field.Gf16Mul(y, byte(x)) ^ gammaCoefficients[i]
+	for i := 0; i < macAmount; i++ {
+		alphaCoefficients := generateCoefficients(GlobalAlphas[i], t)
+		for x := 1; x <= n; x++ {
+			y := alphaCoefficients[len(alphaCoefficients)-1]
+			for i := len(alphaCoefficients) - 2; i >= 0; i-- {
+				y = field.Gf16Mul(y, byte(x)) ^ alphaCoefficients[i]
+			}
+			alphaShares[x-1][i] = y
 		}
-		gammaShares[x-1] = y
+	}
+
+	for i := 0; i < macAmount; i++ {
+		gammaCoefficients := generateCoefficients(field.Gf16Mul(secret, GlobalAlphas[i]), t)
+		for x := 1; x <= n; x++ {
+			y := gammaCoefficients[len(gammaCoefficients)-1]
+			for i := len(gammaCoefficients) - 2; i >= 0; i-- {
+				y = field.Gf16Mul(y, byte(x)) ^ gammaCoefficients[i]
+			}
+			gammaShares[x-1][i] = y
+		}
 	}
 
 	// Zip the shares into []Share
@@ -53,7 +62,6 @@ func createShares(secret byte, n, t int) []Share {
 	for i := 0; i < n; i++ {
 		result[i] = Share{
 			share: shares[i],
-			alpha: alphaShares[i],
 			gamma: gammaShares[i],
 		}
 	}

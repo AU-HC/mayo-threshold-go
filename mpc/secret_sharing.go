@@ -10,20 +10,33 @@ import (
 type SecretSharingAlgo interface {
 	openMatrix(shares [][][]byte) [][]byte
 	authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
-	createSharesForMatrix([][]byte) []MatrixShare
+	createSharesForMatrix(matrix [][]byte) []MatrixShare
 	createSharesForRandomMatrix(rows, cols int) []MatrixShare
 	AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare
 }
 
 type Shamir struct {
-	n, t int
+	n, t        int
+	alphaShares [][]byte
+}
+
+func CreateShamir(n, t int) *Shamir {
+	return &Shamir{
+		n:           n,
+		t:           t,
+		alphaShares: generateAlphaSharesShamir(n, t),
+	}
 }
 
 func (s *Shamir) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
+	result.gammas = make([][][]byte, macAmount)
 	result.shares = AddMatricesNew(A, B.shares)
-	result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
-	result.alpha = B.alpha
+
+	for i := 0; i < macAmount; i++ {
+		result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, s.alphaShares[partyNumber][i]))
+	}
+
 	return result
 }
 
@@ -37,21 +50,24 @@ func (s *Shamir) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	}
 	sPrime := s.openMatrix(sPrimeShares)
 
-	muShares := make([][][]byte, parties)
-	for i, share := range shares {
-		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
+	for k := 0; k < macAmount; k++ {
+		muShares := make([][][]byte, parties)
+		for i, share := range shares {
+			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, s.alphaShares[i][k]))
+		}
+
+		err := commitAndVerify(muShares)
+		if err != nil {
+			return nil, err
+		}
+
+		muOpen := s.openMatrix(muShares)
+
+		if !reflect.DeepEqual(zero, muOpen) {
+			return sPrime, fmt.Errorf("mu was not 0")
+		}
 	}
 
-	err := commitAndVerify(muShares)
-	if err != nil {
-		return nil, err
-	}
-
-	muOpen := s.openMatrix(muShares)
-
-	if !reflect.DeepEqual(zero, muOpen) {
-		return sPrime, fmt.Errorf("mu was not 0")
-	}
 	return sPrime, nil
 }
 
@@ -93,8 +109,9 @@ func (s *Shamir) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 
 			for l := 0; l < amountOfParties; l++ {
 				shares[l].shares[r][c] = byteShares[l].share
-				shares[l].alpha = byteShares[l].alpha
-				shares[l].gammas[r][c] = byteShares[l].gamma
+				for i := 0; i < macAmount; i++ {
+					shares[l].gammas[i][r][c] = byteShares[l].gamma[i]
+				}
 			}
 		}
 	}
@@ -108,20 +125,31 @@ func (s *Shamir) createSharesForRandomMatrix(rows, cols int) []MatrixShare {
 }
 
 type Additive struct {
-	n int
+	n           int
+	alphaShares [][]byte
+}
+
+func CreateAdditive(n int) *Additive {
+	return &Additive{
+		n:           n,
+		alphaShares: generateAlphaSharesAdditive(n),
+	}
 }
 
 func (a *Additive) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
+	result.gammas = make([][][]byte, macAmount)
+
 	if partyNumber == 0 {
 		result.shares = AddMatricesNew(A, B.shares)
-		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
-		result.alpha = B.alpha
 	} else {
 		result.shares = B.shares
-		result.gammas = AddMatricesNew(B.gammas, MultiplyMatrixWithConstant(A, B.alpha))
-		result.alpha = B.alpha
 	}
+
+	for i := 0; i < macAmount; i++ {
+		result.gammas[i] = AddMatricesNew(B.gammas[i], MultiplyMatrixWithConstant(A, a.alphaShares[partyNumber][i]))
+	}
+
 	return result
 }
 
@@ -134,21 +162,24 @@ func (a *Additive) authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, erro
 		AddMatrices(sPrime, share.shares)
 	}
 
-	muShares := make([][][]byte, parties)
-	for i, share := range shares {
-		muShares[i] = AddMatricesNew(share.gammas, MultiplyMatrixWithConstant(sPrime, share.alpha))
+	for k := 0; k < macAmount; k++ {
+		muShares := make([][][]byte, parties)
+		for i, share := range shares {
+			muShares[i] = AddMatricesNew(share.gammas[k], MultiplyMatrixWithConstant(sPrime, a.alphaShares[i][k]))
+		}
+
+		err := commitAndVerify(muShares)
+		if err != nil {
+			return nil, err
+		}
+
+		muOpen := a.openMatrix(muShares)
+
+		if !reflect.DeepEqual(zero, muOpen) {
+			return sPrime, fmt.Errorf("mu was not 0")
+		}
 	}
 
-	err := commitAndVerify(muShares)
-	if err != nil {
-		return nil, err
-	}
-
-	muOpen := a.openMatrix(muShares)
-
-	if !reflect.DeepEqual(zero, muOpen) {
-		return sPrime, fmt.Errorf("mu was not 0")
-	}
 	return sPrime, nil
 }
 
@@ -170,26 +201,77 @@ func (a *Additive) createSharesForMatrix(secretMatrix [][]byte) []MatrixShare {
 	matrixShares := make([]MatrixShare, amountOfParties)
 	for i := range matrixShares {
 		matrixShares[i].shares = make([][]byte, rows)
-		matrixShares[i].gammas = make([][]byte, rows)
+		matrixShares[i].gammas = make([][][]byte, macAmount)
 		for r := 0; r < rows; r++ {
 			matrixShares[i].shares[r] = make([]byte, cols)
-			matrixShares[i].gammas[r] = make([]byte, cols)
+		}
+
+		for k := 0; k < macAmount; k++ {
+			matrixShares[i].gammas[k] = make([][]byte, rows)
+			for r := 0; r < rows; r++ {
+				matrixShares[i].gammas[k][r] = make([]byte, cols)
+			}
 		}
 	}
 
 	for i := 0; i < rows; i++ {
 		for j := 0; j < cols; j++ {
-			shareParts := generateSharesForElement(amountOfParties, secretMatrix[i][j])
+			shareParts := a.generateSharesForElement(secretMatrix[i][j])
 
 			for l := 0; l < amountOfParties; l++ {
-				matrixShares[l].shares[i][j] = shareParts[l].share
-				matrixShares[l].alpha = shareParts[l].alpha
-				matrixShares[l].gammas[i][j] = shareParts[l].gamma
+				for k := 0; k < macAmount; k++ {
+					matrixShares[l].shares[i][j] = shareParts[l].share
+					matrixShares[l].gammas[k][i][j] = shareParts[l].gamma[k]
+				}
 			}
 		}
 	}
 
 	return matrixShares
+}
+
+func (a *Additive) generateSharesForElement(secret byte) []Share {
+	amountOfParties := len(a.alphaShares)
+
+	shares := make([]byte, amountOfParties)
+	gammas := make([][]byte, amountOfParties)
+	var sharesSum byte
+
+	for i := 0; i < amountOfParties-1; i++ {
+		gammas[i] = make([]byte, macAmount)
+
+		// shares of the secret
+		share := rand.SampleFieldElement()
+		shares[i] = share
+		sharesSum ^= share
+	}
+	shares[amountOfParties-1] = secret ^ sharesSum
+	gammas[amountOfParties-1] = make([]byte, macAmount)
+
+	// Gamma
+	gammaSum := make([]byte, macAmount)
+	for i := 0; i < amountOfParties-1; i++ {
+		for j := 0; j < macAmount; j++ {
+			gamma := rand.SampleFieldElement()
+			gammas[i][j] = gamma
+			gammaSum[j] ^= gamma
+		}
+	}
+
+	for i := 0; i < macAmount; i++ {
+		alphaTimesSecret := field.Gf16Mul(GlobalAlphas[i], secret)
+		gammas[amountOfParties-1][i] = gammaSum[i] ^ alphaTimesSecret
+	}
+
+	result := make([]Share, amountOfParties)
+	for i := 0; i < amountOfParties; i++ {
+		result[i] = Share{
+			share: shares[i],
+			gamma: gammas[i],
+		}
+	}
+
+	return result
 }
 
 func (a *Additive) createSharesForRandomMatrix(rows, cols int) []MatrixShare {

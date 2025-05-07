@@ -12,4 +12,6 @@ const v = n - o
 
 const shifts = k * (k + 1) / 2
 
+const macAmount = 16
+
 var tailF = [4]byte{8, 1, 1, 0}

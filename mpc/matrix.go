@@ -9,12 +9,16 @@ import (
 func upper(matrix MatrixShare) MatrixShare {
 	n := len(matrix.shares)
 
-	for i := 0; i < n; i++ {
-		for j := i + 1; j < n; j++ {
-			matrix.shares[i][j] = matrix.shares[i][j] ^ matrix.shares[j][i] // Update upper triangular part
-			matrix.shares[j][i] = 0
-			matrix.gammas[i][j] = matrix.gammas[i][j] ^ matrix.gammas[j][i]
-			matrix.gammas[j][i] = 0
+	for k := 0; k < macAmount; k++ {
+		for i := 0; i < n; i++ {
+			for j := i + 1; j < n; j++ {
+				matrix.shares[i][j] = matrix.shares[i][j] ^ matrix.shares[j][i] // Update upper triangular part
+				matrix.shares[j][i] = 0
+
+				matrix.gammas[k][i][j] = matrix.gammas[k][i][j] ^ matrix.gammas[k][j][i]
+				matrix.gammas[k][j][i] = 0
+
+			}
 		}
 	}
 
@@ -56,23 +60,31 @@ func matrixToVec(A [][]byte) []byte {
 }
 
 func matrixify(v MatrixShare, rows, cols int) MatrixShare {
-	if len(v.shares) != rows*cols || len(v.gammas) != rows*cols {
+	if len(v.shares) != rows*cols || len(v.gammas[0]) != rows*cols {
 		panic(fmt.Errorf("input does not have the correct dimensions for matrixify"))
 	}
 
 	matrix := MatrixShare{
 		shares: make([][]byte, rows),
-		gammas: make([][]byte, rows),
-		alpha:  v.alpha,
+		gammas: make([][][]byte, macAmount),
+	}
+
+	for k := 0; k < macAmount; k++ {
+		matrix.gammas[k] = make([][]byte, rows)
+		for i := 0; i < rows; i++ {
+			matrix.gammas[k][i] = make([]byte, cols)
+			for j := 0; j < cols; j++ {
+				idx := i*cols + j
+				matrix.gammas[k][i][j] = v.gammas[k][idx][0]
+			}
+		}
 	}
 
 	for i := 0; i < rows; i++ {
 		matrix.shares[i] = make([]byte, cols)
-		matrix.gammas[i] = make([]byte, cols)
 		for j := 0; j < cols; j++ {
 			idx := i*cols + j
 			matrix.shares[i][j] = v.shares[idx][0]
-			matrix.gammas[i][j] = v.gammas[idx][0]
 		}
 	}
 
@@ -84,6 +96,16 @@ func generateZeroMatrix(rows, columns int) [][]byte {
 
 	for i := 0; i < rows; i++ {
 		matrix[i] = make([]byte, columns)
+	}
+
+	return matrix
+}
+
+func generateZeroMatrices(depth, rows, columns int) [][][]byte {
+	matrix := make([][][]byte, depth)
+
+	for i := 0; i < depth; i++ {
+		matrix[i] = generateZeroMatrix(rows, columns)
 	}
 
 	return matrix
@@ -169,6 +191,16 @@ func MatrixTranspose(a [][]byte) [][]byte {
 	return result
 }
 
+func MatricesTranspose(matrices [][][]byte) [][][]byte {
+	result := make([][][]byte, len(matrices))
+
+	for i := range result {
+		result[i] = MatrixTranspose(matrices[i])
+	}
+
+	return result
+}
+
 func appendMatrixVertical(A, B [][]byte) [][]byte {
 	if len(A[0]) != len(B[0]) {
 		panic("Cannot append matrices of different column count")
@@ -210,9 +242,12 @@ func appendMatrixShareHorizontal(A, B MatrixShare) MatrixShare {
 	result := createEmptyMatrixShare(len(A.shares), len(A.shares[0]))
 	for i := 0; i < len(A.shares); i++ {
 		result.shares[i] = append(A.shares[i], B.shares[i]...)
-		result.gammas[i] = append(A.gammas[i], B.gammas[i]...)
+
+		for j := 0; j < macAmount; j++ {
+			result.gammas[j][i] = append(A.gammas[j][i], B.gammas[j][i]...)
+		}
+
 	}
-	result.alpha = A.alpha
 	return result
 }
 

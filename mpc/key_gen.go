@@ -42,12 +42,7 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 			ai := c.keygenTriples.TriplesStep4[i].A[partyNumber]
 			bi := c.keygenTriples.TriplesStep4[i].B[partyNumber]
 			di := AddMatricesNew(MatrixTranspose(OShares[partyNumber]), ai)
-			var ei [][]byte
-			if c.algo.shouldPartyAddConstantShare(partyNumber) {
-				ei = AddMatricesNew(AddMatricesNew(P1iTimeOShares[partyNumber], P2[i]), bi)
-			} else {
-				ei = AddMatricesNew(P1iTimeOShares[partyNumber], bi)
-			}
+			ei := AddMatricesNew(c.algo.addPublicLeft(P2[i], P1iTimeOShares[partyNumber], partyNumber), bi)
 
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
@@ -67,11 +62,7 @@ func (c *Context) KeyGen(amountOfParties int) (model.ExpandedPublicKey, []*model
 		// Compute locally [(P1i + P1i^T) * OShares] + P2i
 		LiShares := make([][][]byte, amountOfParties)
 		for partyNumber, _ := range parties {
-			if c.algo.shouldPartyAddConstantShare(partyNumber) {
-				LiShares[partyNumber] = AddMatricesNew(MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber]), P2[i])
-			} else {
-				LiShares[partyNumber] = MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber])
-			}
+			LiShares[partyNumber] = c.algo.addPublicLeft(P2[i], MultiplyMatrices(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber]), partyNumber)
 		}
 
 		for partyNumber, _ := range parties {

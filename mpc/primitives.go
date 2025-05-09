@@ -51,9 +51,7 @@ func (c *Context) multiplicationProtocol(parties []*model.Party, triple model.Tr
 		AddMatrices(db, ae)                // d * [bTriple] + [aTriple] * e
 		AddMatrices(db, cTriple)           // d * [bTriple] + [aTriple] * e + [cTriple]
 
-		if c.algo.shouldPartyAddConstantShare(partyNumber) {
-			AddMatrices(db, de) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
-		}
+		db = c.algo.addPublicLeft(de, db, partyNumber) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
 
 		zShares[partyNumber] = db
 	}

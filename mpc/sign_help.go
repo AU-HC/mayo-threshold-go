@@ -138,12 +138,7 @@ func (c *Context) localComputeY(parties []*model.Party) {
 		}
 
 		y = reduceVecModF(y)
-		if c.algo.shouldPartyAddConstantShare(partyNumber) {
-			t := party.LittleT
-			for i := 0; i < m; i++ {
-				y[i] ^= t[i]
-			}
-		}
+		y = c.algo.addPublicVectorLeft(party.LittleT, y, partyNumber)
 		party.LittleY = y
 	}
 }

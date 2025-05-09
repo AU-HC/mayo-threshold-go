@@ -6,11 +6,20 @@ type SecretSharingAlgo interface {
 	openMatrix(shares [][][]byte) [][]byte
 	createSharesForMatrix([][]byte) [][][]byte
 	createSharesForRandomMatrix(rows, cols int) [][][]byte
-	shouldPartyAddConstantShare(partyNumber int) bool
+	addPublicLeft(A, B [][]byte, partyNumber int) [][]byte
+	addPublicVectorLeft(A, B []byte, partyNumber int) []byte
 }
 
 type Shamir struct {
 	n, t int
+}
+
+func (s *Shamir) addPublicVectorLeft(A, B []byte, _ int) []byte {
+	return AddVec(A, B)
+}
+
+func (s *Shamir) addPublicLeft(A, B [][]byte, _ int) [][]byte {
+	return AddMatricesNew(A, B)
 }
 
 func (s *Shamir) openMatrix(shares [][][]byte) [][]byte {
@@ -62,12 +71,22 @@ func (s *Shamir) createSharesForRandomMatrix(rows, cols int) [][][]byte {
 	return s.createSharesForMatrix(randomMatrix)
 }
 
-func (s *Shamir) shouldPartyAddConstantShare(partyNumber int) bool {
-	return true
-}
-
 type Additive struct {
 	n int
+}
+
+func (a *Additive) addPublicVectorLeft(A, B []byte, partyNumber int) []byte {
+	if partyNumber == 0 {
+		return AddVec(A, B)
+	}
+	return B
+}
+
+func (a *Additive) addPublicLeft(A, B [][]byte, partyNumber int) [][]byte {
+	if partyNumber == 0 {
+		return AddMatricesNew(A, B)
+	}
+	return B
 }
 
 func (a *Additive) openMatrix(shares [][][]byte) [][]byte {
@@ -103,8 +122,4 @@ func (a *Additive) createSharesForRandomMatrix(rows, cols int) [][][]byte {
 	}
 
 	return shares
-}
-
-func (a *Additive) shouldPartyAddConstantShare(partyNumber int) bool {
-	return partyNumber == 0
 }

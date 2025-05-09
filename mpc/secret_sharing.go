@@ -12,7 +12,7 @@ type SecretSharingAlgo interface {
 	authenticatedOpenMatrix(shares []MatrixShare) ([][]byte, error)
 	createSharesForMatrix(matrix [][]byte) []MatrixShare
 	createSharesForRandomMatrix(rows, cols int) []MatrixShare
-	AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare
+	addPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare
 }
 
 type Shamir struct {
@@ -28,7 +28,7 @@ func CreateShamir(n, t int) *Shamir {
 	}
 }
 
-func (s *Shamir) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
+func (s *Shamir) addPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
 	result.gammas = make([][][]byte, macAmount)
 	result.shares = AddMatricesNew(A, B.shares)
@@ -136,7 +136,7 @@ func CreateAdditive(n int) *Additive {
 	}
 }
 
-func (a *Additive) AddPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
+func (a *Additive) addPublicLeft(A [][]byte, B MatrixShare, partyNumber int) MatrixShare {
 	var result MatrixShare
 	result.gammas = make([][][]byte, macAmount)
 

@@ -41,7 +41,7 @@ func (c *Context) KeyGen(amountOfParties int) (ExpandedPublicKey, []*Party) {
 			ai := c.keygenTriples.TriplesStep4[i].A[partyNumber]
 			bi := c.keygenTriples.TriplesStep4[i].B[partyNumber]
 			di := AddMatrixShares(MatrixShareTranspose(OShares[partyNumber]), ai)
-			ei := AddMatrixShares(c.algo.AddPublicLeft(P2[i], P1iTimeOShares[partyNumber], partyNumber), bi)
+			ei := AddMatrixShares(c.algo.addPublicLeft(P2[i], P1iTimeOShares[partyNumber], partyNumber), bi)
 
 			dShares[partyNumber] = di
 			eShares[partyNumber] = ei
@@ -64,7 +64,7 @@ func (c *Context) KeyGen(amountOfParties int) (ExpandedPublicKey, []*Party) {
 		// Compute locally [(P1i + P1i^T) * OShares] + P2i
 		LiShares := make([]MatrixShare, amountOfParties)
 		for partyNumber, _ := range parties {
-			LiShares[partyNumber] = c.algo.AddPublicLeft(P2[i],
+			LiShares[partyNumber] = c.algo.addPublicLeft(P2[i],
 				MulPublicLeft(AddMatricesNew(P1[i], MatrixTranspose(P1[i])), OShares[partyNumber]), partyNumber)
 		}
 

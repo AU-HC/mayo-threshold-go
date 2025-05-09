@@ -57,7 +57,7 @@ func (c *Context) activeMultiplicationProtocol(parties []*Party, triple ActiveTr
 		db = AddMatrixShares(db, ae)      // d * [bTriple] + [aTriple] * e
 		db = AddMatrixShares(db, cTriple) // d * [bTriple] + [aTriple] * e + [cTriple]
 
-		db = c.algo.AddPublicLeft(de, db, partyNumber) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
+		db = c.algo.addPublicLeft(de, db, partyNumber) // d * [bTriple] + [aTriple] * e + [cTriple] + d * e
 		zShares[partyNumber] = db
 	}
 

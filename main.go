@@ -8,9 +8,6 @@ import (
 	"time"
 )
 
-const AmountOfParties = 4
-const Threshold = 4
-
 func main() {
 	// Get application flags
 	arguments := flags.GetApplicationArguments()
@@ -23,18 +20,18 @@ func main() {
 	}
 
 	// Define the message and the context
-	context := mpc.CreateContext(AmountOfParties, Threshold)
+	context := mpc.CreateContext(arguments.AmountOfParties, arguments.Threshold)
 	message := []byte("Hello, world!")
 
 	// Generate expanded public key, and shares of expanded secret key for the parties
 	before := time.Now()
-	epk, parties := context.KeyGenAPI(AmountOfParties)
-	fmt.Println(fmt.Sprintf("Key generation with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
+	epk, parties := context.KeyGenAPI(arguments.AmountOfParties)
+	fmt.Println(fmt.Sprintf("Key generation with %d parties took: %dms", arguments.AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Threshold sign message
 	before = time.Now()
 	sig := context.SignAPI(message, parties)
-	fmt.Println(fmt.Sprintf("Signing with %d parties took: %dms", AmountOfParties, time.Since(before).Milliseconds()))
+	fmt.Println(fmt.Sprintf("Signing with %d parties took: %dms", arguments.AmountOfParties, time.Since(before).Milliseconds()))
 
 	// Verify message
 	before = time.Now()

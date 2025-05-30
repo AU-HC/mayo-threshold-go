@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -71,13 +72,20 @@ func Benchmark(n int) (string, error) {
 			},
 		}
 	}
-
 	// Write the results to JSON in results directory
 	resultsJson, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
 		return "", err
 	}
-	pathToResults := fmt.Sprintf("%s/%s-%s-%s", directory, paramName, time.Now().Format("2006-01-02-15-04-05"), fileName)
+
+	err = os.MkdirAll(directory, os.ModePerm)
+	if err != nil {
+		return "", err
+	}
+
+	// Sanitize file name
+	safeParamName := strings.ReplaceAll(paramName, " ", "_")
+	pathToResults := fmt.Sprintf("%s/%s-%s-%s", directory, safeParamName, time.Now().Format("2006-01-02-15-04-05"), fileName)
 	fmt.Println(pathToResults)
 	err = os.WriteFile(pathToResults, resultsJson, 0644)
 	if err != nil {

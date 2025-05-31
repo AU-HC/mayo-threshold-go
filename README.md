@@ -13,7 +13,7 @@ This threshold construction enables a set of \( n \) parties to jointly sign a m
 - **Benchmarking support:** Evaluate performance for various \( n \), \( t \), and system sizes.
 
 ## Installation
-Ensure you have Go installed: [Download Go](https://go.dev/doc/install)  
+Ensure you have Go installed: [Download Go](https://go.dev/doc/install)
 Clone the repository:
 ```bash
 $ git clone https://github.com/AU-HC/mayo-threshold-go
@@ -24,12 +24,13 @@ $ cd mayo-threshold-go
 The implementation is currently a command-line tool. To run key generation, threshold signing, and verification, for 5 parties with a threshold of 3 execute:
 
 ```bash
-go run main.go -n=5 -t=3
+go run -tags=mayo1 main.go -n=5 -t=3
 ```
 Note that the following flags can be set:
+- `-tags` (string): The level of MAYO.
 - `-n` (int): Total number of parties participating in the threshold signature scheme.
 - `-t` (int): Threshold number of parties required to generate a valid signature.
-- `-b` (int): Optional. Number of benchmark iterations to run.
+- `-b` (int): Optional. Number of benchmark iterations to run. This flag will ignore the n and t flags.
 
 ## Remarks
 - This is a prototype implementation of the threshold construction based on the referenced paper.

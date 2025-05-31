@@ -1,4 +1,4 @@
-# Threshold MAYO in Go
+# Threshold MAYO in Go (Actively secure)
 *Andreas Skriver Nielsen, Markus Valdemar Grønkjær Jensen, and Hans-Christian Kjeldsen*
 
 ## Overview
@@ -35,4 +35,3 @@ Note that the following flags can be set:
 ## Remarks
 - This is a prototype implementation of the threshold construction based on the referenced paper.
 - The current focus is correctness and clarity, not optimization.
-- For a version that includes active security protections, see the active-security branch.

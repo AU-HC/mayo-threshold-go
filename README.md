@@ -1,4 +1,4 @@
-# Threshold MAYO in Go
+# Threshold MAYO in Go (Passively secure)
 *Andreas Skriver Nielsen, Markus Valdemar Grønkjær Jensen, and Hans-Christian Kjeldsen*
 
 ## Overview
